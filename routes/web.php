@@ -52,7 +52,7 @@ Route::middleware(['auth'])->group(function () {
   // Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
   Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
   Route::post('/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
-
+  Route::post('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
 
   // スケジュール関連ルート
   Route::get('/goals/{goal}/schedules/create', [ScheduleController::class, 'create'])->name('schedules.create');
@@ -67,6 +67,8 @@ Route::middleware(['auth'])->group(function () {
   Route::post('/update-task', [TaskController::class, 'updateTaskAjax'])->name('tasks.update.ajax');
   // Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
   Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+
+  Route::post('/update-task-order', [TaskController::class, 'updateOrder'])->name('tasks.updateOrder');
 
   // Line routes
   Route::post('/line/schedule-notification', [LineController::class, 'scheduleNotification'])->name('line.schedule-notification');

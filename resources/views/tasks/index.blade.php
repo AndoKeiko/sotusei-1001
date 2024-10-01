@@ -22,6 +22,7 @@
         <table class="min-w-full leading-normal" id="taskTable">
           <thead>
             <tr>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">順序</th>
               <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                 タスク名
               </th>
@@ -37,8 +38,11 @@
             </tr>
           </thead>
           <tbody>
-            @foreach ($tasks as $task)
+            @foreach ($tasks as $index => $task)
             <tr class="task-item" data-task-id="{{ $task->id }}">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="task-order">{{ $index + 1 }}</span>
+              </td>
               <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
                 <span class="task-name-display">{{ $task->name }}</span>
                 <input type="text" class="task-name-input hidden border rounded px-2 py-1 w-full" value="{{ $task->name }}">
@@ -82,11 +86,27 @@
     <a href="{{ route('goals.index', $goal) }}" class="text-blue-600 hover:text-blue-800">目標ページに戻る</a>
   </div>
 </div>
-
+@push('scripts')
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const taskTable = document.getElementById('taskTable');
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    const taskList = document.getElementById('taskList');
+    
+    if (typeof Sortable === 'undefined') {
+        console.error('Sortable is not loaded');
+        return;
+    }
+
+    new Sortable(taskTable.querySelector('tbody'), {
+      animation: 150,
+      onEnd: function(evt) {
+        updateTaskOrder();
+        // サーバーに新しい順序を送信する処理
+        updateOrderOnServer();
+      }
+    });
 
     taskTable.addEventListener('click', function(e) {
       if (e.target.classList.contains('edit-task')) {
@@ -179,6 +199,53 @@
         }
       }
     });
+
+    function updateTaskOrder() {
+      const taskItems = document.querySelectorAll('.task-item');
+      taskItems.forEach((item, index) => {
+        const orderSpan = item.querySelector('.task-order');
+        orderSpan.textContent = index + 1;
+      });
+    }
+
+    function updateOrderOnServer() {
+      const taskItems = document.querySelectorAll('.task-item');
+      const orderData = Array.from(taskItems).map((item, index) => {
+        return {
+          id: item.dataset.taskId,
+          order: index + 1
+        };
+      });
+
+      fetch('/update-task-order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            tasks: orderData
+          })
+        })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.success) {
+            console.log('Task order updated successfully');
+          } else {
+            console.error('Failed to update task order');
+          }
+        })
+        .catch(error => {
+          console.error('Error updating task order:', error);
+        });
+    }
   });
 </script>
+@endpush
 @endsection

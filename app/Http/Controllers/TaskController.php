@@ -96,4 +96,28 @@ class TaskController extends Controller
     }
     return response()->json(['success' => true]);
   }
+  public function update(Request $request, Task $task)
+  {
+      $validated = $request->validate([
+          'name' => 'required|string|max:255',
+          'description' => 'nullable|string',
+          'estimated_time' => 'required|numeric|min:0',
+          'start_date' => 'required|date',
+          'start_time' => 'required|date_format:H:i:s',
+          'priority' => 'required|in:1,2,3',
+      ]);
+  
+      $task->update($validated);
+  
+      return response()->json(['success' => true, 'task' => $task]);
+  }
+
+  public function updateOrder(Request $request)
+  {
+    $tasks = $request->input('tasks');
+    foreach ($tasks as $task) {
+      Task::where('id', $task['id'])->update(['order' => $task['order']]);
+    }
+    return response()->json(['success' => true]);
+  }
 }

@@ -16,9 +16,9 @@
 
         <div class="mb-4">
           <label for="work_start_time" class="block text-sm font-medium text-gray-700">作業開始時刻</label>
-          <input type="time" id="work_start_time" name="work_start_time" 
-    value="{{ $goal->work_start_time ? $goal->work_start_time->format('H:i') : '09:00' }}" 
-    class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+          <input type="time" id="work_start_time" name="work_start_time"
+            value="{{ $goal->work_start_time ? $goal->work_start_time->format('H:i') : '09:00' }}"
+            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
         </div>
 
         <div class="mb-4">
@@ -30,7 +30,7 @@
 
         <div id="scheduleOutput" class="mt-4 p-4 border rounded-md hidden"></div>
 
-        <div id="calendar"></div>
+        <div id="calendar" class="mt-8"></div>
         <div class="mt-8">
           <a href="{{ route('goals.index', $goal) }}" class="text-blue-600 hover:text-blue-800">目標ページに戻る</a>
         </div>
@@ -101,12 +101,11 @@
 @push('styles')
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.css' rel='stylesheet' />
 @endpush
-
 @push('scripts')
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.js'></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  const calendarEl = document.getElementById('calendar');
+  document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('calendar');
     const generateScheduleBtn = document.getElementById('generateScheduleBtn');
     const workPeriodStart = document.getElementById('work_period_start');
     const workStartTime = document.getElementById('work_start_time');
@@ -115,212 +114,206 @@ document.addEventListener('DOMContentLoaded', function() {
     const closeTaskModal = document.getElementById('closeTaskModal');
     const saveTaskChanges = document.getElementById('saveTaskChanges');
     const scheduleOutput = document.getElementById('scheduleOutput');
-    const goalId = {{ $goal->id }};
+    const goalId = @json($goal->id);
     const generateScheduleUrl = "{{ route('goals.schedule.generate', ['goal' => $goal->id]) }}";
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        events: @json($calendarEvents),
-        editable: true,
-        eventDisplay: 'block',
-        displayEventTime: true,
-        displayEventEnd: true,
-        nextDayThreshold: '00:00:00',
-        eventTimeFormat: {
-            hour: 'numeric',
-            minute: '2-digit',
-            meridiem: 'short'
-        },
-        eventClick: function(info) {
-            openEditModal(info.event);
-        },
-        eventDrop: function(info) {
-            updateTask(info.event);
-        },
-        eventResize: function(info) {
-            updateTask(info.event);
-        },
-        eventDidMount: function(info) {
-            if (info.event.end && info.event.end.getDate() !== info.event.start.getDate()) {
-                info.el.style.background = 'linear-gradient(90deg, #3788d8 0%, #3788d8 50%, #62a8e8 50%, #62a8e8 100%)';
-                info.el.style.color = 'white';
-            }
+      initialView: 'dayGridMonth',
+      events: @json($calendarEvents),
+      editable: true,
+      eventDisplay: 'block',
+      displayEventTime: true,
+      displayEventEnd: true,
+      nextDayThreshold: '00:00:00',
+      eventTimeFormat: {
+        hour: 'numeric',
+        minute: '2-digit',
+        meridiem: 'short'
+      },
+      eventClick: function(info) {
+        openEditModal(info.event);
+      },
+      eventDrop: function(info) {
+        updateTask(info.event);
+      },
+      eventResize: function(info) {
+        updateTask(info.event);
+      },
+      eventDidMount: function(info) {
+        if (info.event.end && info.event.end.getDate() !== info.event.start.getDate()) {
+          info.el.style.background = 'linear-gradient(90deg, #3788d8 0%, #3788d8 50%, #62a8e8 50%, #62a8e8 100%)';
+          info.el.style.color = 'white';
         }
+      }
     });
 
     calendar.render();
 
     if (typeof initialSchedule !== 'undefined') {
-        displaySchedule(initialSchedule);
+      displaySchedule(initialSchedule);
     }
 
 
     generateScheduleBtn.addEventListener('click', function() {
-        const workPeriodStartValue = workPeriodStart.value;
-        const startTimeValue = workStartTime.value;
-        const hoursPerDayValue = parseFloat(workHoursPerDay.value);
+      const workPeriodStartValue = workPeriodStart.value;
+      const startTimeValue = workStartTime.value;
+      const hoursPerDayValue = parseFloat(workHoursPerDay.value);
 
-        if (!workPeriodStartValue || !startTimeValue || isNaN(hoursPerDayValue)) {
-            alert('すべての項目を正しく入力してください。');
-            return;
-        }
+      if (!workPeriodStartValue || !startTimeValue || isNaN(hoursPerDayValue)) {
+        alert('すべての項目を正しく入力してください。');
+        return;
+      }
 
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-        fetch(generateScheduleUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-                work_period_start: workPeriodStartValue,
-                work_start_time: startTimeValue,
-                work_hours_per_day: hoursPerDayValue
-            })
+      fetch(generateScheduleUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            work_period_start: workPeriodStartValue,
+            work_start_time: startTimeValue,
+            work_hours_per_day: hoursPerDayValue
+          })
         })
         .then(response => {
-            if (!response.ok) {
-                return response.text().then(text => {
-                    throw new Error(`HTTP error! status: ${response.status}, message: ${text}`);
-                });
-            }
-            return response.json();
+          if (!response.ok) {
+            return response.text().then(text => {
+              throw new Error(`HTTP error! status: ${response.status}, message: ${text}`);
+            });
+          }
+          return response.json();
         })
         .then(data => {
-            if (data.success) {
-                displaySchedule(data.schedule);
-                updateCalendar(data.calendarEvents);
-            } else {
-                alert(data.message || 'スケジュールの生成に失敗しました。');
-            }
+          if (data.success) {
+            displaySchedule(data.schedule);
+            updateCalendar(data.calendarEvents);
+          } else {
+            alert(data.message || 'スケジュールの生成に失敗しました。');
+          }
         })
         .catch(error => {
-            console.error('Error:', error);
-            alert('エラーが発生しました。コンソールを確認してください。');
+          console.error('Error:', error);
+          alert('エラーが発生しました。コンソールを確認してください。');
         });
     });
 
     function displaySchedule(schedule) {
-        let scheduleHtml = '<h3 class="text-lg font-semibold mb-2">生成されたスケジュール</h3>';
+      let scheduleHtml = '<h3 class="text-lg font-semibold mb-2">生成されたスケジュール</h3>';
+      scheduleHtml += '<ul class="list-disc pl-5">';
+
+      for (const date in schedule) {
+        scheduleHtml += `<li class="mb-2"><strong>${date}</strong>:`;
         scheduleHtml += '<ul class="list-disc pl-5">';
-        
-        for (const date in schedule) {
-            scheduleHtml += `<li class="mb-2"><strong>${date}</strong>:`;
-            scheduleHtml += '<ul class="list-disc pl-5">';
-            for (const task of schedule[date]) {
-                scheduleHtml += `<li>${task.name} (${task.duration}時間, ${task.start_time} - ${task.end_time})</li>`;
-            }
-            scheduleHtml += '</ul></li>';
+        for (const task of schedule[date]) {
+          scheduleHtml += `<li>${task.name} (${task.duration}時間, ${task.start_time} - ${task.end_time})</li>`;
         }
-        
-        scheduleHtml += '</ul>';
-        
-        scheduleOutput.innerHTML = scheduleHtml;
-        scheduleOutput.classList.remove('hidden');
+        scheduleHtml += '</ul></li>';
+      }
+
+      scheduleHtml += '</ul>';
+
+      scheduleOutput.innerHTML = scheduleHtml;
+      scheduleOutput.classList.remove('hidden');
     }
 
     function updateCalendar(events) {
-        calendar.removeAllEvents();
-        calendar.addEventSource(events);
+      calendar.removeAllEvents();
+      calendar.addEventSource(events);
     }
 
     function openEditModal(event) {
-        document.getElementById('editTaskId').value = event.id;
-        document.getElementById('editTaskName').value = event.title;
-        document.getElementById('editTaskDescription').value = event.extendedProps.description || '';
-        document.getElementById('editTaskEstimatedTime').value = event.extendedProps.estimatedTime || '';
+      document.getElementById('editTaskId').value = event.id;
+      document.getElementById('editTaskName').value = event.title;
+      document.getElementById('editTaskDescription').value = event.extendedProps.description || '';
+      document.getElementById('editTaskEstimatedTime').value = event.extendedProps.estimatedTime || '';
 
-        // 開始日の設定
-        let startDate = event.extendedProps.start_date || (event.start ? event.start.toISOString().split('T')[0] : '');
-        document.getElementById('editTaskStartDate').value = startDate;
+      // 開始日の設定
+      let startDate = event.extendedProps.start_date || (event.start ? event.start.toISOString().split('T')[0] : '');
+      document.getElementById('editTaskStartDate').value = startDate;
 
-        // 開始時間の設定
-        let startTime = event.extendedProps.start_time || '';
-        if (startTime) {
-            // 'HH:mm:ss' 形式から 'HH:mm' 形式に変換
-            startTime = startTime.substring(0, 5);
-        } else if (event.start) {
-            // フォールバック: イベントの開始時間を使用
-            startTime = event.start.toTimeString().substring(0, 5);
-        }
-        document.getElementById('editTaskStartTime').value = startTime;
+      // 開始時間の設定
+      let startTime = event.extendedProps.start_time || '';
+      if (startTime) {
+        // 'HH:mm:ss' 形式から 'HH:mm' 形式に変換
+        startTime = startTime.substring(0, 5);
+      } else if (event.start) {
+        // フォールバック: イベントの開始時間を使用
+        startTime = event.start.toTimeString().substring(0, 5);
+      }
+      document.getElementById('editTaskStartTime').value = startTime;
 
-        document.getElementById('editTaskPriority').value = event.extendedProps.priority || '2';
-        taskEditModal.classList.remove('hidden');
+      document.getElementById('editTaskPriority').value = event.extendedProps.priority || '2';
+      taskEditModal.classList.remove('hidden');
     }
 
     saveTaskChanges.addEventListener('click', function() {
-        const taskId = document.getElementById('editTaskId').value;
-        const taskName = document.getElementById('editTaskName').value;
-        const taskDescription = document.getElementById('editTaskDescription').value;
-        const taskEstimatedTime = parseFloat(document.getElementById('editTaskEstimatedTime').value);
-        const taskStartDate = document.getElementById('editTaskStartDate').value;
-        const taskStartTime = document.getElementById('editTaskStartTime').value;
-        const taskPriority = document.getElementById('editTaskPriority').value;
+      const taskId = document.getElementById('editTaskId').value;
+      const taskName = document.getElementById('editTaskName').value;
+      const taskDescription = document.getElementById('editTaskDescription').value;
+      const taskEstimatedTime = parseFloat(document.getElementById('editTaskEstimatedTime').value);
+      const taskStartDate = document.getElementById('editTaskStartDate').value;
+      const taskStartTime = document.getElementById('editTaskStartTime').value;
+      const taskPriority = document.getElementById('editTaskPriority').value;
 
-        const event = calendar.getEventById(taskId);
-        if (event) {
-            event.remove();
+      const event = calendar.getEventById(taskId);
+      if (event) {
+        event.remove();
+      }
+
+      const newStart = new Date(taskStartDate + 'T' + taskStartTime);
+      const newEnd = new Date(newStart.getTime() + taskEstimatedTime * 60 * 60 * 1000);
+
+      calendar.addEvent({
+        id: taskId,
+        title: taskName,
+        start: newStart,
+        end: newEnd,
+        extendedProps: {
+          description: taskDescription,
+          estimatedTime: taskEstimatedTime,
+          priority: taskPriority
         }
+      });
 
-        const newStart = new Date(taskStartDate + 'T' + taskStartTime);
-        const newEnd = new Date(newStart.getTime() + taskEstimatedTime * 60 * 60 * 1000);
-
-        calendar.addEvent({
-            id: taskId,
-            title: taskName,
-            start: newStart,
-            end: newEnd,
-            extendedProps: {
-                description: taskDescription,
-                estimatedTime: taskEstimatedTime,
-                priority: taskPriority
-            }
-        });
-
-        updateTask(calendar.getEventById(taskId));
-        taskEditModal.classList.add('hidden');
+      updateTask(calendar.getEventById(taskId));
+      taskEditModal.classList.add('hidden');
     });
 
     function updateTask(event) {
-    let startDate = event.extendedProps.start_date || (event.start ? event.start.toISOString().split('T')[0] : '');
-    let startTime = event.extendedProps.start_time || '';
-    
-    if (!startTime && event.start) {
-        // フォールバック: イベントの開始時間を使用
-        startTime = event.start.toTimeString().substring(0, 8); // HH:mm:ss 形式
-    }
+      let startDate = event.start ? event.start.toISOString().split('T')[0] : '';
+      let startTime = event.start ? event.start.toTimeString().substring(0, 8) : ''; // HH:mm:ss 形式
 
-    fetch('/update-task', {
-        method: 'POST',
-        headers: {
+      fetch(`/tasks/${event.id}`, {
+          method: 'POST',
+          headers: {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-        },
-        body: JSON.stringify({
-            id: event.id,
+          },
+          body: JSON.stringify({
             name: event.title,
             description: event.extendedProps.description || '',
             estimated_time: event.extendedProps.estimatedTime || 0,
             start_date: startDate,
             start_time: startTime,
             priority: event.extendedProps.priority || '2'
+          })
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
             console.log('Task updated successfully');
-        } else {
+          } else {
             console.error('Failed to update task');
-        }
-    })
-    .catch(error => {
-        console.error('Error updating task:', error);
-    });
-}
-});
+          }
+        })
+        .catch(error => {
+          console.error('Error updating task:', error);
+        });
+    }
+  });
 </script>
 @endpush
