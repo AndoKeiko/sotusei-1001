@@ -19,7 +19,9 @@ Route::get('/dashboard', function () {
   return redirect()->route('goals.index');
 })->name('dashboard');
 
-
+Route::get('/home', function () {
+  return view('home');
+});
 
 Route::get('/line/login', [LineLoginController::class, 'redirectToLine'])->name('line.login');
 Route::get('/callback', [LineLoginController::class, 'handleLineCallback'])->name('line.callback');
