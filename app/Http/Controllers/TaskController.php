@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\Goal;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class TaskController extends Controller
 {
@@ -40,37 +42,57 @@ class TaskController extends Controller
 
   public function updateTaskAjax(Request $request, Task $task)
   {
-    $validatedData = $request->validate([
-      'name' => 'required|string|max:255',
-      'estimated_time' => 'required|numeric|min:0',
-      'priority' => 'required|integer|min:1|max:3',
-      'start_date' => 'required|date',
-      'start_time' => 'required|date_format:H:i:s',
-    ]);
+    Log::info('Updating task', ['task_id' => $task->id, 'request_data' => $request->all()]);
+    try {
+      $validatedData = $request->validate([
+        'name' => 'required|string|max:255',
+        'estimated_time' => 'required|numeric|min:0',
+        'priority' => 'required|integer|min:1|max:3',
+        'start_date' => 'required|date',
+        'start_time' => 'required|date_format:H:i:s',
+      ]);
 
-    $task->update($validatedData);
+      $task->update($validatedData);
 
-    // このゴールに関連するすべてのタスクを取得
-    $allTasks = Task::where('goal_id', $task->goal_id)
-      ->orderBy('start_date')
-      ->orderBy('start_time')
-      ->get();
+      // このゴールに関連するすべてのタスクを取得
+      $allTasks = Task::where('goal_id', $task->goal_id)
+        ->orderBy('start_date')
+        ->orderBy('start_time')
+        ->get();
 
-    // スケジュールの再計算
-    $currentDateTime = new \DateTime($validatedData['start_date'] . ' ' . $validatedData['start_time']);
-    foreach ($allTasks as $t) {
-      if ($t->id === $task->id) {
-        continue; // 今更新したタスクはスキップ
+      // スケジュールの再計算
+      $currentDateTime = Carbon::parse($validatedData['start_date'] . ' ' . $validatedData['start_time']);
+      foreach ($allTasks as $t) {
+        if ($t->id === $task->id) {
+          continue; // 今更新したタスクはスキップ
+        }
+        $t->start_date = $currentDateTime->toDateString();
+        $t->start_time = $currentDateTime->toTimeString();
+        $t->save();
+
+        // 次の時間枠に移動
+        $currentDateTime->addHours($t->estimated_time);
+
+        // 午後5時以降の場合は翌日の午前9時に設定
+        if ($currentDateTime->hour >= 17) {
+          $currentDateTime->addDay()->setTime(9, 0, 0);
+        }
       }
-      $t->start_date = $currentDateTime->format('Y-m-d');
-      $t->start_time = $currentDateTime->format('H:i:s');
-      $t->save();
 
-      // 次の時間枠に移動
-      $currentDateTime->add(new \DateInterval('PT' . $t->estimated_time . 'H'));
+      return response()->json(['success' => true, 'message' => 'Task updated successfully']);
+    } catch (\Exception $e) {
+      Log::error('Error updating task: ' . $e->getMessage());
+      return response()->json(['success' => false, 'message' => 'Error updating task'], 500);
     }
+  }
 
-    return response()->json(['success' => true]);
+  public function updateOrder(Request $request)
+  {
+      $taskOrder = $request->input('taskOrder');
+      foreach ($taskOrder as $index => $taskId) {
+          Task::where('id', $taskId)->update(['order' => $index]);
+      }
+      return response()->json(['success' => true]);
   }
   public function show(Task $task)
   {
@@ -96,28 +118,51 @@ class TaskController extends Controller
     }
     return response()->json(['success' => true]);
   }
+
+
   public function update(Request $request, Task $task)
   {
+    Log::info('Attempting to update task', [
+      'task_id' => $task->id,
+      'task_exists' => $task->exists,
+      'request_id' => $request->route('task')
+  ]);
+    try {
       $validated = $request->validate([
-          'name' => 'required|string|max:255',
-          'description' => 'nullable|string',
-          'estimated_time' => 'required|numeric|min:0',
-          'start_date' => 'required|date',
-          'start_time' => 'required|date_format:H:i:s',
-          'priority' => 'required|in:1,2,3',
+        'name' => 'required|string|max:255',
+        'description' => 'nullable|string',
+        'estimated_time' => 'required|numeric|min:0',
+        'start_date' => 'required|date',
+        'start_time' => 'required|date_format:H:i:s',
+        'priority' => 'required|in:1,2,3',
       ]);
-  
-      $task->update($validated);
-  
-      return response()->json(['success' => true, 'task' => $task]);
-  }
 
-  public function updateOrder(Request $request)
-  {
-    $tasks = $request->input('tasks');
-    foreach ($tasks as $task) {
-      Task::where('id', $task['id'])->update(['order' => $task['order']]);
+      // start_date と start_time を組み合わせて Carbon インスタンスを作成
+      $startDateTime = Carbon::parse($validated['start_date'] . ' ' . $validated['start_time']);
+
+      // タスクを更新
+      $task->update([
+        'name' => $validated['name'],
+        'description' => $validated['description'],
+        'estimated_time' => $validated['estimated_time'],
+        'start_date' => $startDateTime->toDateString(),
+        'start_time' => $startDateTime->toTimeString(),
+        'priority' => $validated['priority'],
+      ]);
+
+      // タスクを更新
+      Log::info('Task updated successfully', [
+        'task_id' => $task->id,
+        'updated_data' => $task->fresh()->toArray()
+    ]);
+
+      return response()->json(['success' => true, 'task' => $task->fresh()]);
+    } catch (\Exception $e) {
+      Log::error('Error updating task:', ['error' => $e->getMessage()]);
+      return response()->json([
+        'success' => false,
+        'message' => $e->getMessage(),
+      ], 500);
     }
-    return response()->json(['success' => true]);
   }
 }

@@ -5,10 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class Task extends Model
 {
     use HasFactory;
+
+    protected $table = 'tasks';
+    protected $primaryKey = 'id';
+    public $incrementing = true;
+    protected $keyType = 'int';
 
     protected $fillable = [
         'user_id',
@@ -31,9 +37,8 @@ class Task extends Model
         'user_id' => 'integer',
         'goal_id' => 'integer',
         'elapsed_time' => 'integer',
-        'estimated_time' => 'integer',
+        'estimated_time' => 'float',
         'start_date' => 'date',
-        'start_time' => 'time',
         'priority' => 'integer',
         'order' => 'integer',
         'review_interval' => 'string',
@@ -41,6 +46,11 @@ class Task extends Model
         'last_notification_sent' => 'datetime',
         'end_date' => 'date',
     ];
+
+    public function getRouteKeyName()
+    {
+        return 'id'; // または使用しているキーの名前
+    }
 
     public const REVIEW_INTERVALS = [
         'next_day', '7_days', '14_days', '28_days', '56_days', 'completed'
@@ -55,7 +65,23 @@ class Task extends Model
         }
         return null;
     }
+    public function getStartTimeAttribute($value)
+    {
+        if (!$value) {
+            return null;
+        }
+        try {
+            return Carbon::parse($value);
+        } catch (\Exception $e) {
+            Log::warning("Invalid start_time format for task {$this->id}: {$value}");
+            return null;
+        }
+    }
 
+    public function setStartTimeAttribute($value)
+    {
+        $this->attributes['start_time'] = Carbon::parse($value)->format('H:i:s');
+    }
     public function getEndAttribute()
     {
         if ($this->start_date && $this->estimated_time) {

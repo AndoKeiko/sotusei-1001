@@ -70,8 +70,9 @@ class GoalController extends Controller
       $hoursPerDay = $goal->work_hours_per_day ?? 8.0;
 
       $schedule = $scheduleGenerator->generateSchedule($goal, $workPeriodStart, $startTime, $hoursPerDay);
+      $goalId = $goal->id;
  
-      return view('schedules.show', compact('goal', 'schedule'));
+      return view('schedules.index', compact('goal', 'schedule','goalId'));
   }
 
   // 目標編集ページの表示
@@ -207,54 +208,54 @@ class GoalController extends Controller
     return view('goals.history', compact('goals'));
   }
 
-  public function scheduleGenerate(Request $request, Goal $goal)
-    {
-        try {
-            $validatedData = $request->validate([
-                'work_period_start' => 'required|date',
-                'work_start_time' => 'required',
-                'work_hours_per_day' => 'required|numeric|min:0|max:24',
-            ]);
+  // public function scheduleGenerate(Request $request, Goal $goal)
+  //   {
+  //       try {
+  //           $validatedData = $request->validate([
+  //               'work_period_start' => 'required|date',
+  //               'work_start_time' => 'required',
+  //               'work_hours_per_day' => 'required|numeric|min:0|max:24',
+  //           ]);
 
-            $schedule = $this->scheduleGenerator->generateSchedule(
-                $goal,
-                $validatedData['work_period_start'],
-                $validatedData['work_start_time'],
-                $validatedData['work_hours_per_day']
-            );
+  //           $schedule = $this->scheduleGenerator->generateSchedule(
+  //               $goal,
+  //               $validatedData['work_period_start'],
+  //               $validatedData['work_start_time'],
+  //               $validatedData['work_hours_per_day']
+  //           );
 
-            $calendarEvents = $this->generateCalendarEvents($schedule);
+  //           $calendarEvents = $this->generateCalendarEvents($schedule);
 
-            return response()->json([
-                'success' => true,
-                'schedule' => $schedule,
-                'calendarEvents' => $calendarEvents
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage()
-            ], 500);
-        }
-    }
+  //           return response()->json([
+  //               'success' => true,
+  //               'schedule' => $schedule,
+  //               'calendarEvents' => $calendarEvents
+  //           ]);
+  //       } catch (\Exception $e) {
+  //           return response()->json([
+  //               'success' => false,
+  //               'message' => $e->getMessage()
+  //           ], 500);
+  //       }
+  //   }
 
-    private function generateCalendarEvents($schedule)
-    {
-        $events = [];
-        foreach ($schedule as $date => $tasks) {
-            foreach ($tasks as $task) {
-              // $startDateTime = Carbon::parse($date . ' ' . $task['start_time']);
-              // $this->scheduleEmailNotification($task, $startDateTime);
+    // public function generateCalendarEvents($schedule)
+    // {
+    //     $events = [];
+    //     foreach ($schedule as $date => $tasks) {
+    //         foreach ($tasks as $task) {
+    //           // $startDateTime = Carbon::parse($date . ' ' . $task['start_time']);
+    //           // $this->scheduleEmailNotification($task, $startDateTime);
 
-                $events[] = [
-                    'title' => $task['name'],
-                    'start' => $date . 'T' . $task['start_time'],
-                    'end' => $date . 'T' . $task['end_time'],
-                ];
-            }
-        }
-        return $events;
-      }
+    //             $events[] = [
+    //                 'title' => $task['name'],
+    //                 'start' => $date . 'T' . $task['start_time'],
+    //                 'end' => $date . 'T' . $task['end_time'],
+    //             ];
+    //         }
+    //     }
+    //     return $events;
+    //   }
     // メール通知をスケジュールするメソッド
     // private function scheduleEmailNotification($task, $startDateTime)
     // {

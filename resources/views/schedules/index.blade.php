@@ -111,10 +111,9 @@
     const workStartTime = document.getElementById('work_start_time');
     const workHoursPerDay = document.getElementById('work_hours_per_day');
     const taskEditModal = document.getElementById('taskEditModal');
-    const closeTaskModal = document.getElementById('closeTaskModal');
     const saveTaskChanges = document.getElementById('saveTaskChanges');
     const scheduleOutput = document.getElementById('scheduleOutput');
-    const goalId = @json($goal->id);
+    const goalId = @json($goalId);
     const generateScheduleUrl = "{{ route('goals.schedule.generate', ['goal' => $goal->id]) }}";
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
@@ -166,6 +165,12 @@
 
       const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
+      console.log('Sending request with:', {
+        workPeriodStartValue,
+        startTimeValue,
+        hoursPerDayValue
+      });
+
       fetch(generateScheduleUrl, {
           method: 'POST',
           headers: {
@@ -180,18 +185,23 @@
           })
         })
         .then(response => {
+          console.log('Response status:', response.status);
+          console.log('Response headers:', response.headers);
           if (!response.ok) {
             return response.text().then(text => {
+              console.error('Error response text:', text);
               throw new Error(`HTTP error! status: ${response.status}, message: ${text}`);
             });
           }
           return response.json();
         })
         .then(data => {
+          console.log('Received data:', data);
           if (data.success) {
             displaySchedule(data.schedule);
             updateCalendar(data.calendarEvents);
           } else {
+            console.error('Server reported failure:', data);
             alert(data.message || 'スケジュールの生成に失敗しました。');
           }
         })
@@ -201,7 +211,9 @@
         });
     });
 
+
     function displaySchedule(schedule) {
+      console.log('Displaying schedule:', schedule);
       let scheduleHtml = '<h3 class="text-lg font-semibold mb-2">生成されたスケジュール</h3>';
       scheduleHtml += '<ul class="list-disc pl-5">';
 
@@ -221,8 +233,10 @@
     }
 
     function updateCalendar(events) {
+      console.log('Updating calendar with events:', events);
       calendar.removeAllEvents();
       calendar.addEventSource(events);
+      console.log('Calendar updated');
     }
 
     function openEditModal(event) {
@@ -230,6 +244,7 @@
       document.getElementById('editTaskName').value = event.title;
       document.getElementById('editTaskDescription').value = event.extendedProps.description || '';
       document.getElementById('editTaskEstimatedTime').value = event.extendedProps.estimatedTime || '';
+      console.log('Updating task with ID:', event.id);
 
       // 開始日の設定
       let startDate = event.extendedProps.start_date || (event.start ? event.start.toISOString().split('T')[0] : '');
@@ -251,6 +266,7 @@
     }
 
     saveTaskChanges.addEventListener('click', function() {
+      console.log('saveTaskChanges button clicked');
       const taskId = document.getElementById('editTaskId').value;
       const taskName = document.getElementById('editTaskName').value;
       const taskDescription = document.getElementById('editTaskDescription').value;
@@ -283,36 +299,148 @@
       taskEditModal.classList.add('hidden');
     });
 
-    function updateTask(event) {
-      let startDate = event.start ? event.start.toISOString().split('T')[0] : '';
-      let startTime = event.start ? event.start.toTimeString().substring(0, 8) : ''; // HH:mm:ss 形式
+    // function updateTask(event) {
+    //   let startDate = event.start ? event.start.toISOString().split('T')[0] : '';
+    //   let startTime = event.start ? event.start.toTimeString().substring(0, 8) : '';
 
-      fetch(`/tasks/${event.id}`, {
-          method: 'POST',
-          headers: {
+    //   const taskData = {
+    //     name: event.title,
+    //     description: event.extendedProps.description || '',
+    //     estimated_time: event.extendedProps.estimatedTime || 0,
+    //     start_date: startDate,
+    //     start_time: startTime,
+    //     priority: event.extendedProps.priority || '2'
+    //   };
+
+    //   console.log('Sending task data:', taskData);
+
+    //   fetch(`/tasks/${event.id}`, {
+    //       method: 'PUT',
+    //       headers: {
+    //         'Content-Type': 'application/json',
+    //         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+    //         'Accept': 'application/json'
+    //       },
+    //       body: JSON.stringify(taskData)
+    //     })
+    //     .then(response => {
+    //       if (!response.ok) {
+    //         return response.json().then(errorData => {
+    //           console.error('Error response:', errorData);
+    //           throw new Error(`HTTP error! status: ${response.status}`);
+    //         });
+    //       }
+    //       return response.json();
+    //     })
+    //     .then(data => {
+    //       if (data.success) {
+    //         console.log('Task updated successfully', data.task);
+    //         // カレンダー上のイベントを更新
+    //         event.remove();
+    //         calendar.addEvent({
+    //           id: data.task.id,
+    //           title: data.task.name,
+    //           start: `${data.task.start_date}T${data.task.start_time}`,
+    //           end: moment(`${data.task.start_date}T${data.task.start_time}`).add(data.task.estimated_time, 'hours').format(),
+    //           extendedProps: {
+    //             description: data.task.description,
+    //             estimatedTime: data.task.estimated_time,
+    //             priority: data.task.priority
+    //           }
+    //         });
+    //       } else {
+    //         console.error('Failed to update task', data);
+    //       }
+    //     })
+    //     .catch(error => {
+    //       console.error('Error updating task:', error);
+    //     });
+    // }
+
+    function updateTask(event, isDropEvent = false) {
+    let taskData = {
+        name: event.title,
+        description: event.extendedProps.description || '',
+        estimated_time: event.extendedProps.estimatedTime || 0,
+        start_date: event.start.toISOString().split('T')[0],
+        start_time: event.start.toTimeString().substr(0, 8),
+        priority: event.extendedProps.priority || '2'
+    };
+
+    if (isDropEvent) {
+        // ドラッグ＆ドロップの場合は、start_dateとstart_timeのみを更新
+        taskData = {
+            start_date: event.start.toISOString().split('T')[0],
+            start_time: event.start.toTimeString().substr(0, 8)
+        };
+    }
+
+    fetch(`/tasks/${event.id}`, {
+        method: 'PUT',
+        headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-          },
-          body: JSON.stringify({
-            name: event.title,
-            description: event.extendedProps.description || '',
-            estimated_time: event.extendedProps.estimatedTime || 0,
-            start_date: startDate,
-            start_time: startTime,
-            priority: event.extendedProps.priority || '2'
-          })
-        })
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify(taskData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            console.log('Task updated successfully', data.task);
+            // ... 更新成功時の処理 ...
+        } else {
+            console.error('Failed to update task', data);
+        }
+    })
+    .catch(error => {
+        console.error('Error updating task:', error.message);
+    });
+}
+
+// ドラッグ＆ドロップ時のイベントハンドラ
+calendar.on('eventDrop', function(info) {
+    updateTask(info.event, true);
+});
+
+// 更新ボタン押下時のイベントハンドラ
+document.getElementById('updateTaskButton').addEventListener('click', function() {
+    let event = calendar.getEventById(currentEditingEventId); // 現在編集中のイベントIDを使用
+    if (event) {
+        updateTask(event);
+    }
+});
+
+
+    function reloadCalendarEvents() {
+      fetch('/api/get-calendar-events') // サーバー側で最新のイベントデータを返すエンドポイントを作成
         .then(response => response.json())
         .then(data => {
-          if (data.success) {
-            console.log('Task updated successfully');
-          } else {
-            console.error('Failed to update task');
-          }
+          calendar.removeAllEvents();
+          calendar.addEventSource(data.calendarEvents);
         })
         .catch(error => {
-          console.error('Error updating task:', error);
+          console.error('Error fetching calendar events:', error);
         });
+    }
+
+    function closeTaskModal() {
+      const modal = document.getElementById('taskEditModal');
+      if (modal) {
+        modal.classList.add('hidden');
+      }
+    }
+    // イベントリスナーの追加
+    const closeButton = document.getElementById('closeTaskModal');
+    if (closeButton) {
+      closeButton.addEventListener('click', closeTaskModal);
     }
   });
 </script>

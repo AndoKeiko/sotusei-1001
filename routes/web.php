@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
   return Auth::check() ? redirect()->route('goals.index') : redirect()->route('login');
 });
-// Route::get('/home', [HomeController::class, 'index'])->name('home');
 
 Route::get('/dashboard', function () {
   return redirect()->route('goals.index');
@@ -44,32 +43,25 @@ Route::middleware(['auth'])->group(function () {
   Route::post('goals/{goal}/generate-schedule', [GoalController::class, 'generateSchedule'])->name('goals.generate-schedule');
   Route::post('/goals/store-and-generate-tasks', [GoalController::class, 'storeAndGenerateTasks'])
     ->name('goals.store_and_generate_tasks');
-  // Route::post('/goals/{goal}/schedule/generate', [ScheduleController::class, 'generate'])
-  //   ->name('goals.schedule.generate');
+
 
   // タスク関連ルート
   Route::get('/goals/{goal}/tasks', [TaskController::class, 'index'])->name('tasks.index');
   Route::post('/goals/{goal}/tasks', [TaskController::class, 'store'])->name('tasks.store');
   Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
-  // Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
   Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
   Route::post('/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
-  Route::post('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
+  Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
 
   // スケジュール関連ルート
   Route::get('/goals/{goal}/schedules/create', [ScheduleController::class, 'create'])->name('schedules.create');
   Route::post('/goals/{goal}/schedules', [ScheduleController::class, 'store'])->name('schedules.store');
-  // Route::post('/goals/{goal}/schedule-generate', [GoalController::class, 'generateSchedule'])->name('goals.schedule.generate');
   Route::get('goals/{goal}/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
-  Route::post('/goals/{goal}/schedule/generate', [ScheduleController::class, 'generate'])
-    ->name('goals.schedule.generate');
+  Route::post('/goals/{goal}/schedule/generate', [ScheduleController::class, 'generate'])->name('goals.schedule.generate');
+
 
   // Task routes
-  // Route::post('/update-task', [TaskController::class, 'updateTask'])->name('tasks.update');
   Route::post('/update-task', [TaskController::class, 'updateTaskAjax'])->name('tasks.update.ajax');
-  // Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
-  Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
-
   Route::post('/update-task-order', [TaskController::class, 'updateOrder'])->name('tasks.updateOrder');
 
   // Line routes

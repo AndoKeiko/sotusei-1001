@@ -9,6 +9,11 @@ class Goal extends Model
 {
   use HasFactory;
 
+  protected $table = 'goals';
+  protected $primaryKey = 'id';
+  public $incrementing = true;
+  protected $keyType = 'int';
+
   // fillable: マスアサインメント可能な属性
   protected $fillable = [
     'user_id',

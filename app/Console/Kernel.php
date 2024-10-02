@@ -13,10 +13,7 @@ class Kernel extends ConsoleKernel
    */
   protected function schedule(Schedule $schedule): void
   {
-    $schedule->command('tasks:send-reminders')->everyMinute();
-    $schedule->call(function () {
-      Mail::to('recipient@example.com')->send(new YourMail());
-    })->daily();
+    $schedule->command('tasks:send-notifications')->everyMinute();
   }
 
   /**

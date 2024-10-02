@@ -4,11 +4,12 @@ namespace App\Services;
 
 use App\Models\Goal;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class ScheduleGeneratorService
 {
-  public function generateSchedule(Goal $goal, string $workPeriodStart, string $startTime, float $hoursPerDay): array
-  {
+    public function generateSchedule(Goal $goal, string $workPeriodStart, string $startTime, float $hoursPerDay): array
+    {
     //スケジュール情報の入った配列を返せる
     $workPeriodStart = Carbon::parse($workPeriodStart);
     $hoursPerDay = $hoursPerDay ?? 8.0;
@@ -16,6 +17,8 @@ class ScheduleGeneratorService
     $endDate = Carbon::parse($goal->period_end);
 
     $tasks = $goal->tasks()->orderBy('priority', 'desc')->get();
+    Log::info('ScheduleGeneratorService Tasks:', ['tasks' => $tasks]);
+
     $schedule = [];
 
     $currentDate = $workPeriodStart;
@@ -34,8 +37,8 @@ class ScheduleGeneratorService
         $dateSchedule[] = [
           'name' => $task->name,
           'duration' => $timeForTask,
-          'start_time' => $taskStartTime->format('H:i'),  // 作業の開始時間
-          'end_time' => $taskStartTime->copy()->addHours($timeForTask)->format('H:i'),  // 作業の終了時間
+          'start_time' => $taskStartTime->format('H:i:s'),  // 作業の開始時間
+          'end_time' => $taskStartTime->copy()->addHours($timeForTask)->format('H:i:s'),  // 作業の終了時間
         ];
 
         // 作業終了後、次の作業開始時間を計算
