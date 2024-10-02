@@ -37,12 +37,13 @@ class ScheduleController extends Controller
   
       // タスクを取得し、ユーザー情報を事前にロード
       $tasks = Task::where('goal_id', $goal->id)->with('user')->get();
+      Log::info('Calendar Tasks:', ['tasks' => $tasks]);
   
       // タスクからカレンダーイベントを生成
       $calendarEvents = $tasks->map(function($task) {
           return $task->calendarEvent;
       })->values();
-  
+      Log::info('Calendar Events:', ['events' => $calendarEvents]);
       return view('schedules.index', [
           'goal' => $goal,
           'calendarEvents' => $calendarEvents,

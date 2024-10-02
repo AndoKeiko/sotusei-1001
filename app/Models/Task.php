@@ -111,43 +111,37 @@ class Task extends Model
   // カレンダーイベントの取得
   public function getCalendarEventAttribute()
   {
-    // $this->start_date を Carbon インスタンスに変換
-    $startDate = $this->start_date ? Carbon::parse($this->start_date) : null;
-    $startTime = $this->start_time ? $this->start_time : '09:00:00';
-
-    if ($startDate) {
+      // $this->start_date を Carbon インスタンスに変換
+      $startDate = $this->start_date ? Carbon::parse($this->start_date) : Carbon::today();
+      $startTime = $this->start_time ? $this->start_time : '09:00:00';
+  
       $startDateTime = Carbon::parse($startDate->format('Y-m-d') . ' ' . $startTime);
       $start = $startDateTime->format('Y-m-d\TH:i:s');
-    } else {
-      $start = null; // または適切なデフォルト値
-    }
-
-    if ($this->end_date) {
-      $endDateTime = Carbon::parse($this->end_date);
-      $end = $endDateTime->format('Y-m-d\TH:i:s');
-    } else {
-      $estimatedHours = $this->estimated_time ?? 1;
-      $endDateTime = isset($startDateTime) ? $startDateTime->copy()->addHours($estimatedHours) : null;
-      $end = $endDateTime ? $endDateTime->format('Y-m-d\TH:i:s') : null;
-    }
-
-    return [
-      'id' => $this->id,
-      'title' => $this->name,
-      'start' => $start,
-      'end' => $end,
-      'extendedProps' => [
-        'description' => $this->description,
-        'priority' => $this->priority,
-        'estimatedTime' => $this->estimated_time,
-        'start_date' => $startDate ? $startDate->format('Y-m-d') : null,
-        'start_time' => $startTime,
-      ],
-    ];
+  
+      if ($this->end_date) {
+          $endDateTime = Carbon::parse($this->end_date);
+          $end = $endDateTime->format('Y-m-d\TH:i:s');
+      } else {
+          $estimatedHours = $this->estimated_time ?? 1;
+          $endDateTime = $startDateTime->copy()->addHours($estimatedHours);
+          $end = $endDateTime->format('Y-m-d\TH:i:s');
+      }
+  
+      return [
+          'id' => $this->id,
+          'title' => $this->name,
+          'start' => $start,
+          'end' => $end,
+          'extendedProps' => [
+              'description' => $this->description,
+              'priority' => $this->priority,
+              'estimatedTime' => $this->estimated_time,
+              'start_date' => $startDate->format('Y-m-d'),
+              'start_time' => $startTime,
+          ],
+      ];
   }
-
-
-
+ 
 
 
   // リレーションシップ

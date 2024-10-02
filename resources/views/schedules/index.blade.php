@@ -106,6 +106,7 @@
 <script>
   console.log('taskEditModal element:', taskEditModal);
   document.addEventListener('DOMContentLoaded', function() {
+    console.log('Calendar Events:', @json($calendarEvents));
     const calendarEl = document.getElementById('calendar');
     const generateScheduleBtn = document.getElementById('generateScheduleBtn');
     const workPeriodStart = document.getElementById('work_period_start');
