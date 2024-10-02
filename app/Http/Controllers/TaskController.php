@@ -122,47 +122,30 @@ class TaskController extends Controller
 
   public function update(Request $request, Task $task)
   {
-    Log::info('Attempting to update task', [
-      'task_id' => $task->id,
-      'task_exists' => $task->exists,
-      'request_id' => $request->route('task')
-  ]);
-    try {
-      $validated = $request->validate([
-        'name' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'estimated_time' => 'required|numeric|min:0',
-        'start_date' => 'required|date',
-        'start_time' => 'required|date_format:H:i:s',
-        'priority' => 'required|in:1,2,3',
-      ]);
-
-      // start_date と start_time を組み合わせて Carbon インスタンスを作成
-      $startDateTime = Carbon::parse($validated['start_date'] . ' ' . $validated['start_time']);
-
+      $isPartialUpdate = $request->input('is_partial_update', false);
+  
+      $rules = [
+          'start_date' => 'required|date',
+          'start_time' => 'required|date_format:H:i:s',
+      ];
+  
+      if (!$isPartialUpdate) {
+          $rules = array_merge($rules, [
+              'name' => 'required|string|max:255',
+              'description' => 'nullable|string',
+              'estimated_time' => 'required|numeric|min:0',
+              'priority' => 'required|in:1,2,3',
+          ]);
+      }
+  
+      $validated = $request->validate($rules);
+  
       // タスクを更新
-      $task->update([
-        'name' => $validated['name'],
-        'description' => $validated['description'],
-        'estimated_time' => $validated['estimated_time'],
-        'start_date' => $startDateTime->toDateString(),
-        'start_time' => $startDateTime->toTimeString(),
-        'priority' => $validated['priority'],
-      ]);
-
-      // タスクを更新
-      Log::info('Task updated successfully', [
-        'task_id' => $task->id,
-        'updated_data' => $task->fresh()->toArray()
-    ]);
-
+      $task->update($validated);
+  
       return response()->json(['success' => true, 'task' => $task->fresh()]);
-    } catch (\Exception $e) {
-      Log::error('Error updating task:', ['error' => $e->getMessage()]);
-      return response()->json([
-        'success' => false,
-        'message' => $e->getMessage(),
-      ], 500);
-    }
   }
+  
+
+  
 }

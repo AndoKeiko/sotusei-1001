@@ -104,6 +104,7 @@
 @push('scripts')
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.js'></script>
 <script>
+  console.log('taskEditModal element:', taskEditModal);
   document.addEventListener('DOMContentLoaded', function() {
     const calendarEl = document.getElementById('calendar');
     const generateScheduleBtn = document.getElementById('generateScheduleBtn');
@@ -240,30 +241,18 @@
     }
 
     function openEditModal(event) {
-      document.getElementById('editTaskId').value = event.id;
+      const taskId = event.id;
+      document.getElementById('editTaskId').value = taskId;
       document.getElementById('editTaskName').value = event.title;
       document.getElementById('editTaskDescription').value = event.extendedProps.description || '';
       document.getElementById('editTaskEstimatedTime').value = event.extendedProps.estimatedTime || '';
-      console.log('Updating task with ID:', event.id);
-
-      // 開始日の設定
-      let startDate = event.extendedProps.start_date || (event.start ? event.start.toISOString().split('T')[0] : '');
-      document.getElementById('editTaskStartDate').value = startDate;
-
-      // 開始時間の設定
-      let startTime = event.extendedProps.start_time || '';
-      if (startTime) {
-        // 'HH:mm:ss' 形式から 'HH:mm' 形式に変換
-        startTime = startTime.substring(0, 5);
-      } else if (event.start) {
-        // フォールバック: イベントの開始時間を使用
-        startTime = event.start.toTimeString().substring(0, 5);
-      }
-      document.getElementById('editTaskStartTime').value = startTime;
-
+      document.getElementById('editTaskStartDate').value = event.extendedProps.start_date || event.start.toISOString().split('T')[0];
+      document.getElementById('editTaskStartTime').value = event.extendedProps.start_time || event.start.toTimeString().substr(0, 5);
       document.getElementById('editTaskPriority').value = event.extendedProps.priority || '2';
+
       taskEditModal.classList.remove('hidden');
     }
+
 
     saveTaskChanges.addEventListener('click', function() {
       console.log('saveTaskChanges button clicked');
@@ -297,126 +286,73 @@
 
       updateTask(calendar.getEventById(taskId));
       taskEditModal.classList.add('hidden');
+      // closeTaskModal();
     });
 
-    // function updateTask(event) {
-    //   let startDate = event.start ? event.start.toISOString().split('T')[0] : '';
-    //   let startTime = event.start ? event.start.toTimeString().substring(0, 8) : '';
-
-    //   const taskData = {
-    //     name: event.title,
-    //     description: event.extendedProps.description || '',
-    //     estimated_time: event.extendedProps.estimatedTime || 0,
-    //     start_date: startDate,
-    //     start_time: startTime,
-    //     priority: event.extendedProps.priority || '2'
-    //   };
-
-    //   console.log('Sending task data:', taskData);
-
-    //   fetch(`/tasks/${event.id}`, {
-    //       method: 'PUT',
-    //       headers: {
-    //         'Content-Type': 'application/json',
-    //         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-    //         'Accept': 'application/json'
-    //       },
-    //       body: JSON.stringify(taskData)
-    //     })
-    //     .then(response => {
-    //       if (!response.ok) {
-    //         return response.json().then(errorData => {
-    //           console.error('Error response:', errorData);
-    //           throw new Error(`HTTP error! status: ${response.status}`);
-    //         });
-    //       }
-    //       return response.json();
-    //     })
-    //     .then(data => {
-    //       if (data.success) {
-    //         console.log('Task updated successfully', data.task);
-    //         // カレンダー上のイベントを更新
-    //         event.remove();
-    //         calendar.addEvent({
-    //           id: data.task.id,
-    //           title: data.task.name,
-    //           start: `${data.task.start_date}T${data.task.start_time}`,
-    //           end: moment(`${data.task.start_date}T${data.task.start_time}`).add(data.task.estimated_time, 'hours').format(),
-    //           extendedProps: {
-    //             description: data.task.description,
-    //             estimatedTime: data.task.estimated_time,
-    //             priority: data.task.priority
-    //           }
-    //         });
-    //       } else {
-    //         console.error('Failed to update task', data);
-    //       }
-    //     })
-    //     .catch(error => {
-    //       console.error('Error updating task:', error);
-    //     });
-    // }
+    function formatTime(date) {
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      const seconds = date.getSeconds().toString().padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    }
 
     function updateTask(event, isDropEvent = false) {
-    let taskData = {
+      const taskData = {
         name: event.title,
         description: event.extendedProps.description || '',
         estimated_time: event.extendedProps.estimatedTime || 0,
         start_date: event.start.toISOString().split('T')[0],
-        start_time: event.start.toTimeString().substr(0, 8),
-        priority: event.extendedProps.priority || '2'
-    };
+        start_time: formatTime(event.start),
+        priority: event.extendedProps.priority || '2',
+        is_partial_update: isDropEvent // ここを追加
+      };
 
-    if (isDropEvent) {
-        // ドラッグ＆ドロップの場合は、start_dateとstart_timeのみを更新
-        taskData = {
-            start_date: event.start.toISOString().split('T')[0],
-            start_time: event.start.toTimeString().substr(0, 8)
-        };
-    }
-
-    fetch(`/tasks/${event.id}`, {
-        method: 'PUT',
-        headers: {
+      fetch(`/tasks/${event.id}`, {
+          method: 'PUT',
+          headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify(taskData)
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.text().then(text => {
-                throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
+            'X-CSRF-TOKEN': document
+              .querySelector('meta[name="csrf-token"]')
+              .getAttribute('content'),
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(taskData),
+        })
+        .then(response => {
+          if (!response.ok) {
+            return response.json().then(data => {
+              throw new Error(
+                `HTTP error! status: ${response.status}, message: ${data.message || 'Unknown error'}`
+              );
             });
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.success) {
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.success) {
             console.log('Task updated successfully', data.task);
-            // ... 更新成功時の処理 ...
-        } else {
+            // 更新成功時の処理
+          } else {
             console.error('Failed to update task', data);
-        }
-    })
-    .catch(error => {
-        console.error('Error updating task:', error.message);
-    });
-}
-
-// ドラッグ＆ドロップ時のイベントハンドラ
-calendar.on('eventDrop', function(info) {
-    updateTask(info.event, true);
-});
-
-// 更新ボタン押下時のイベントハンドラ
-document.getElementById('updateTaskButton').addEventListener('click', function() {
-    let event = calendar.getEventById(currentEditingEventId); // 現在編集中のイベントIDを使用
-    if (event) {
-        updateTask(event);
+          }
+        })
+        .catch(error => {
+          console.error('Error updating task:', error.message);
+        });
     }
-});
+
+    // ドラッグ＆ドロップ時のイベントハンドラ
+    calendar.on('eventDrop', function(info) {
+      updateTask(info.event, true);
+    });
+
+    // 更新ボタン押下時のイベントハンドラ
+    // document.getElementById('updateTaskButton').addEventListener('click', function() {
+    //   let event = calendar.getEventById(currentEditingEventId); // 現在編集中のイベントIDを使用
+    //   if (event) {
+    //     updateTask(event);
+    //   }
+    // });
 
 
     function reloadCalendarEvents() {

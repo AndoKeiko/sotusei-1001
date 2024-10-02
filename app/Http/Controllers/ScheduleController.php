@@ -26,6 +26,7 @@ class ScheduleController extends Controller
       $startTime = $goal->work_start_time ?? '09:00';
       $hoursPerDay = $goal->work_hours_per_day ?? 8.0;
   
+      // スケジュールの生成
       $schedule = $this->scheduleGenerator->generateSchedule(
           $goal,
           $goal->period_start,
@@ -34,20 +35,24 @@ class ScheduleController extends Controller
       );
       Log::info('Generated Schedule:', ['schedule' => $schedule]);
   
-      // タスクに関連するユーザー情報を事前にロード
+      // タスクを取得し、ユーザー情報を事前にロード
       $tasks = Task::where('goal_id', $goal->id)->with('user')->get();
   
-      $calendarEvents = $this->generateCalendarEvents($schedule);
+      // タスクからカレンダーイベントを生成
+      $calendarEvents = $tasks->map(function($task) {
+          return $task->calendarEvent;
+      })->values();
   
       return view('schedules.index', [
           'goal' => $goal,
           'calendarEvents' => $calendarEvents,
           'initialSchedule' => $schedule,
-          'tasks' => $tasks, // タスクをビューに渡す
+          'tasks' => $tasks,
           'goalId' => $goal->id,
           'generateScheduleUrl' => route('goals.schedule.generate', ['goal' => $goal->id]),
       ]);
   }
+  
   
 
 
@@ -63,13 +68,13 @@ class ScheduleController extends Controller
       foreach ($tasks as $task) {
           // タスクに `start_date` と `start_time` が設定されている場合、それを使用
           if ($task->start_date && $task->start_time) {
-              $currentDate = Carbon::parse($task->start_date);
-              $currentTime = Carbon::parse($task->start_time);
-          } else {
-              // タスクに日時が設定されていない場合、デフォルトの開始日時を使用
-              $currentDate = Carbon::parse($startDate);
-              $currentTime = Carbon::parse($startTime);
-          }
+            $currentDate = Carbon::parse($task->start_date);
+            $currentTime = Carbon::parse($task->start_time);
+        } else {
+            // タスクに日時が設定されていない場合、デフォルトの開始日時を使用
+            $currentDate = Carbon::parse($startDate);
+            $currentTime = Carbon::parse($startTime);
+        }
   
           $taskDuration = $task->estimated_time; // タスクの所要時間
   
