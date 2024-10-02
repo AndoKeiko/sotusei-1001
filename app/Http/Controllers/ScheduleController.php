@@ -193,14 +193,6 @@ class ScheduleController extends Controller
         $startDateTime  = Carbon::parse($date . ' ' . $task['start_time']);
         $endDateTime = Carbon::parse($date . ' ' . $task['end_time']);
 
-        // LINE通知のスケジュール
-        // $userId = $task['user_id'];
-        // $messageText = "タスク「{$task['name']}」がもうすぐ始まります！";
-        // $delay = $startDateTime->diffInSeconds(now());
-        // if ($delay > 0) {
-        //   SendLineNotificationJob::dispatch($userId, $messageText)->delay($delay);
-        // }
-
         $events[] = [
           'title' => $task['name'],
           'start' => $startDateTime->toIso8601String(),

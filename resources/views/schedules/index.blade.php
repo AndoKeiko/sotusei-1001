@@ -1,6 +1,7 @@
 @extends('layouts.app')
 <script>
   var initialSchedule = @json($initialSchedule);
+  var initialCalendarEvents = @json($calendarEvents);
 </script>
 @section('content')
 <div class="py-12">
@@ -28,7 +29,7 @@
 
         <button id="generateScheduleBtn" class="mb-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">スケジュール生成</button>
 
-        <div id="scheduleOutput" class="mt-4 p-4 border rounded-md hidden"></div>
+        <div id="scheduleOutput" class="mt-4 p-4 border rounded-md hidden accordion-collapse" data-accordion="collapse"></div>
 
         <div id="calendar" class="mt-8"></div>
         <div class="mt-8">
@@ -104,9 +105,8 @@
 @push('scripts')
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.10.2/main.min.js'></script>
 <script>
-  console.log('taskEditModal element:', taskEditModal);
   document.addEventListener('DOMContentLoaded', function() {
-    console.log('Calendar Events:', @json($calendarEvents));
+    console.log('Calendar Events:', initialCalendarEvents);
     const calendarEl = document.getElementById('calendar');
     const generateScheduleBtn = document.getElementById('generateScheduleBtn');
     const workPeriodStart = document.getElementById('work_period_start');
@@ -120,7 +120,7 @@
 
     const calendar = new FullCalendar.Calendar(calendarEl, {
       initialView: 'dayGridMonth',
-      events: @json($calendarEvents),
+      events: initialCalendarEvents,
       editable: true,
       eventDisplay: 'block',
       displayEventTime: true,
@@ -214,25 +214,53 @@
     });
 
 
-    function displaySchedule(schedule) {
-      console.log('Displaying schedule:', schedule);
-      let scheduleHtml = '<h3 class="text-lg font-semibold mb-2">生成されたスケジュール</h3>';
-      scheduleHtml += '<ul class="list-disc pl-5">';
+ function displaySchedule(schedule) {
+  console.log('Displaying schedule:', schedule);
+  let scheduleHtml = `
+    <h3 class="text-base font-semibold cursor-pointer mb-2" id="accordionBtn">
+      生成されたスケジュール
+    </h3>
+    <div id="scheduleAccordion" class="">
+      <ul class="list-none">
+  `;
+	let calendarEvents = [];
+  for (const date in schedule) {
+    scheduleHtml += `
+      <li class="mb-2 text-sm">
+        <div class="font-semibold py-0 px-1 bg-gray-200 hover:bg-gray-300 rounded cursor-pointer">
+          ${date}
+        </div>
+        <ul id="schedule-${date}" class="list-disc pl-8 mt-2">
+    `;
+    for (const task of schedule[date]) {
+      const roundedDuration = Math.round(task.duration * 10) / 10;
+      scheduleHtml += `<li class="text-xs">${task.name} (${roundedDuration}時間, ${task.start_time} - ${task.end_time})</li>`;
 
-      for (const date in schedule) {
-        scheduleHtml += `<li class="mb-2"><strong>${date}</strong>:`;
-        scheduleHtml += '<ul class="list-disc pl-5">';
-        for (const task of schedule[date]) {
-          scheduleHtml += `<li>${task.name} (${task.duration}時間, ${task.start_time} - ${task.end_time})</li>`;
+      // カレンダーイベントを作成
+      const startDateTime = new Date(`${date}T${task.start_time}`);
+      const endDateTime = new Date(`${date}T${task.end_time}`);
+      calendarEvents.push({
+        title: task.name,
+        start: startDateTime.toISOString(),
+        end: endDateTime.toISOString(),
+        extendedProps: {
+          duration: roundedDuration,
+          description: task.description || '',
+          estimatedTime: task.estimated_time || 0,
+          priority: task.priority || '2',
         }
-        scheduleHtml += '</ul></li>';
-      }
+      });
 
-      scheduleHtml += '</ul>';
-
-      scheduleOutput.innerHTML = scheduleHtml;
-      scheduleOutput.classList.remove('hidden');
     }
+    scheduleHtml += '</ul></li>';
+  }
+
+  scheduleHtml += '</ul></div>';
+
+  scheduleOutput.innerHTML = scheduleHtml;
+  updateCalendar(calendarEvents);
+  scheduleOutput.classList.remove('hidden');
+}
 
     function updateCalendar(events) {
       console.log('Updating calendar with events:', events);
@@ -346,15 +374,6 @@
     calendar.on('eventDrop', function(info) {
       updateTask(info.event, true);
     });
-
-    // 更新ボタン押下時のイベントハンドラ
-    // document.getElementById('updateTaskButton').addEventListener('click', function() {
-    //   let event = calendar.getEventById(currentEditingEventId); // 現在編集中のイベントIDを使用
-    //   if (event) {
-    //     updateTask(event);
-    //   }
-    // });
-
 
     function reloadCalendarEvents() {
       fetch('/api/get-calendar-events') // サーバー側で最新のイベントデータを返すエンドポイントを作成

@@ -30,14 +30,16 @@ class TaskController extends Controller
       'name' => 'required|string|max:255',
       'estimated_time' => 'required|numeric|min:0',
       'priority' => 'required|integer|min:1|max:3',
+      'start_date' => 'nullable|date',
+      'start_time' => 'nullable|date_format:H:i:s',
     ]);
 
     $task = new Task([
       'name' => $validatedData['name'],
       'estimated_time' => $validatedData['estimated_time'],
       'priority' => $validatedData['priority'],
-      'start_date' => $validatedData['start_date'] ?? Carbon::today()->format('Y-m-d'),
-      'start_time' => $validatedData['start_time'] ?? '09:00:00',
+      'start_date' => $validatedData['start_date'] ?? null,
+      'start_time' => $validatedData['start_time'] ?? null,
   ]);
     $task->user_id = Auth::id();
     $task->goal_id = $goal->id;
