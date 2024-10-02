@@ -17,7 +17,7 @@
           </div>
 
           <div>
-            <label for="current_status" class="block text-sm font-medium text-gray-700">現状</label>
+            <label for="current_status" class="block text-sm font-medium text-gray-700">現在の状況</label>
             <textarea name="current_status" id="current_status" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">{{ old('current_status', $lastGoal->current_status ?? '') }}</textarea>
           </div>
 
@@ -30,7 +30,6 @@
             <label for="period_end" class="block text-sm font-medium text-gray-700">終了日</label>
             <input type="date" name="period_end" id="period_end" value="{{ old('period_end', $lastGoal->period_end ?? '') }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
           </div>
-
           <div>
             <label for="work_start_time" class="block text-sm font-medium text-gray-700">開始時間</label>
             <input type="time" name="work_start_time" id="work_start_time" value="{{ old('work_start_time', $lastGoal->work_start_time ?? '') }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">

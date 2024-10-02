@@ -47,12 +47,17 @@ class GoalController extends Controller
       'current_status' => 'nullable|string',
       'period_start' => 'required|date',
       'period_end' => 'required|date|after:period_start',
+      'description' => 'nullable|string',
       'work_hours_per_day' => 'nullable|numeric|min:0|max:24',
-    ]);
+      'work_start_time' => 'nullable|date_format:H:i:s',
+  ]);
 
-    $goal = new Goal($validatedData);
-    $goal->user_id = Auth::id();
-    $goal->save();
+  $goal = new Goal($validatedData);
+  $goal->user_id = Auth::id();
+  $goal->status = 0; // デフォルト値を設定
+  $goal->total_time = 0; // デフォルト値を設定
+  $goal->progress_percentage = 0; // デフォルト値を設定
+  $goal->save();
 
     // AIを利用してタスクを生成
     $tasks = $this->generateTasks($goal);
@@ -84,17 +89,22 @@ class GoalController extends Controller
   // 目標の更新
   public function update(Request $request, Goal $goal)
   {
-    $validatedData = $request->validate([
-      'name' => 'required|string|max:255',
-      'current_status' => 'nullable|string',
-      'period_start' => 'required|date',
-      'period_end' => 'required|date|after:period_start',
-      'work_hours_per_day' => 'nullable|numeric|min:0|max:24',
-    ]);
-
-    $goal->update($validatedData);
-
-    return redirect()->route('goals.show', $goal)->with('success', '目標が更新されました');
+      $validatedData = $request->validate([
+          'name' => 'required|string|max:255',
+          'current_status' => 'nullable|string',
+          'period_start' => 'required|date',
+          'period_end' => 'required|date|after:period_start',
+          'description' => 'nullable|string',
+          'work_hours_per_day' => 'nullable|numeric|min:0|max:24',
+          'work_start_time' => 'nullable|date_format:H:i:s',
+          'status' => 'integer|min:0|max:1',
+          'total_time' => 'integer|min:0',
+          'progress_percentage' => 'integer|min:0|max:100',
+      ]);
+  
+      $goal->update($validatedData);
+  
+      return redirect()->route('goals.show', $goal)->with('success', '目標が更新されました');
   }
 
   // 目標の削除

@@ -22,10 +22,10 @@ class Goal extends Model
     'period_start',
     'period_end',
     'description',
+    'work_hours_per_day',
     'status',
     'total_time',
     'progress_percentage',
-    'work_hours_per_day',
     'work_start_time',
   ];
 
