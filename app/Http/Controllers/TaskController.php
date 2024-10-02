@@ -127,33 +127,24 @@ class TaskController extends Controller
     return response()->json(['success' => true]);
   }
 
-
   public function update(Request $request, Task $task)
   {
-      $isPartialUpdate = $request->input('is_partial_update', false);
-  
-      $rules = [
+      $validatedData = $request->validate([
+          'name' => 'required|string|max:255',
+          'description' => 'nullable|string',
+          'estimated_time' => 'nullable|numeric',
           'start_date' => 'required|date',
-          'start_time' => 'required|date_format:H:i:s',
-      ];
+          'start_time' => 'required',
+          'priority' => 'required|integer|min:1|max:3',
+      ]);
   
-      if (!$isPartialUpdate) {
-          $rules = array_merge($rules, [
-              'name' => 'required|string|max:255',
-              'description' => 'nullable|string',
-              'estimated_time' => 'required|numeric|min:0',
-              'priority' => 'required|in:1,2,3',
-          ]);
-      }
+      $task->update($validatedData);
   
-      $validated = $request->validate($rules);
-  
-      // タスクを更新
-      $task->update($validated);
-  
-      return response()->json(['success' => true, 'task' => $task->fresh()]);
+      return response()->json([
+          'success' => true,
+          'task' => $task
+      ]);
   }
-  
 
   
 }

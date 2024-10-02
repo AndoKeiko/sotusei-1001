@@ -8,14 +8,14 @@ use Illuminate\Support\Facades\Log;
 
 class ScheduleGeneratorService
 {
-    public function generateSchedule(Goal $goal, string $workPeriodStart, string $startTime, float $hoursPerDay): array
-    {
-    //スケジュール情報の入った配列を返せる
+  public function generateSchedule(Goal $goal, string $workPeriodStart, string $startTime, float $hoursPerDay): array
+  {
+    // 1. 基本的な変数の設定
     $workPeriodStart = Carbon::parse($workPeriodStart);
     $hoursPerDay = $hoursPerDay ?? 8.0;
     $startTime = $startTime ? Carbon::parse($startTime) : Carbon::parse('09:00');
     $endDate = Carbon::parse($goal->period_end);
-
+    // 2. タスクの取得
     $tasks = $goal->tasks()->orderBy('priority', 'desc')->get();
     Log::info('ScheduleGeneratorService Tasks:', ['tasks' => $tasks]);
 
@@ -24,24 +24,27 @@ class ScheduleGeneratorService
     $currentDate = $workPeriodStart;
     $currentTaskIndex = 0;
     $remainingTaskTime = $tasks->isNotEmpty() ? $tasks[$currentTaskIndex]->estimated_time : 0;
-
+    // 3. スケジュール生成のメインループ
     while ($currentDate <= $endDate && $currentTaskIndex < $tasks->count()) {
       $dailyWorkTime = $hoursPerDay;
       $taskStartTime = clone $startTime; // スタート時間をクローンする
       $dateSchedule = [];
-
+      // 4. 1日のスケジュール生成
       while ($dailyWorkTime > 0 && $currentTaskIndex < $tasks->count()) {
         $task = $tasks[$currentTaskIndex];
         $timeForTask = min($dailyWorkTime, $remainingTaskTime);
 
         $dateSchedule[] = [
+          'id' => $task->id,  // タスクのIDを追加
           'name' => $task->name,
           'duration' => $timeForTask,
-          'start_time' => $taskStartTime->format('H:i:s'),  // 作業の開始時間
-          'end_time' => $taskStartTime->copy()->addHours($timeForTask)->format('H:i:s'),  // 作業の終了時間
+          'start_time' => $taskStartTime->format('H:i:s'),
+          'end_time' => $taskStartTime->copy()->addHours($timeForTask)->format('H:i:s'),
+          'description' => $task->description,  // タスクの説明を追加
+          'priority' => $task->priority,  // タスクの優先度を追加
         ];
 
-        // 作業終了後、次の作業開始時間を計算
+        // 5. 次のタスクの準備
         $taskStartTime->addHours($timeForTask);
 
         $remainingTaskTime -= $timeForTask;

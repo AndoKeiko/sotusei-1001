@@ -186,25 +186,29 @@ class ScheduleController extends Controller
 
   private function scheduleToCalendarEvents($schedule)
   {
-    $events = [];
-
-    foreach ($schedule as $date => $tasks) {
-      foreach ($tasks as $task) {
-        $startDateTime  = Carbon::parse($date . ' ' . $task['start_time']);
-        $endDateTime = Carbon::parse($date . ' ' . $task['end_time']);
-
-        $events[] = [
-          'title' => $task['name'],
-          'start' => $startDateTime->toIso8601String(),
-          'end' => $endDateTime->toIso8601String(),
-          'extendedProps' => [
-            'duration' => $task['duration']
-          ]
-        ];
+      $events = [];
+  
+      foreach ($schedule as $date => $tasks) {
+          foreach ($tasks as $task) {
+              $startDateTime  = Carbon::parse($date . ' ' . $task['start_time']);
+              $endDateTime = Carbon::parse($date . ' ' . $task['end_time']);
+  
+              $events[] = [
+                  'id' => $task['id'], // タスクIDを追加
+                  'title' => $task['name'],
+                  'start' => $startDateTime->toIso8601String(),
+                  'end' => $endDateTime->toIso8601String(),
+                  'extendedProps' => [
+                      'duration' => $task['duration'],
+                      'description' => $task['description'] ?? '',
+                      'estimatedTime' => $task['estimated_time'] ?? 0,
+                      'priority' => $task['priority'] ?? '2',
+                  ]
+              ];
+          }
       }
-    }
-
-    return $events;
+  
+      return $events;
   }
 
   private function generateCalendarEvents($schedule)

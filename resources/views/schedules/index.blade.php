@@ -1,7 +1,8 @@
 @extends('layouts.app')
 <script>
-  var initialSchedule = @json($initialSchedule);
-  var initialCalendarEvents = @json($calendarEvents);
+  let initialSchedule = @json($initialSchedule);
+  let initialCalendarEvents = @json($calendarEvents);
+  let updateTaskUrl = "{{ route('tasks.update', ':taskId') }}";
 </script>
 @section('content')
 <div class="py-12">
@@ -135,10 +136,20 @@
         openEditModal(info.event);
       },
       eventDrop: function(info) {
-        updateTask(info.event);
+        if (info.event) {
+          updateTask(info.event, true);
+        } else {
+          console.error('Error: Dropped event is undefined');
+          alert('イベントの移動中にエラーが発生しました: イベントが見つかりません。');
+        }
       },
       eventResize: function(info) {
-        updateTask(info.event);
+        if (info.event) {
+          updateTask(info.event, true);
+        } else {
+          console.error('Error: Resized event is undefined');
+          alert('イベントのリサイズ中にエラーが発生しました: イベントが見つかりません。');
+        }
       },
       eventDidMount: function(info) {
         if (info.event.end && info.event.end.getDate() !== info.event.start.getDate()) {
@@ -214,53 +225,55 @@
     });
 
 
- function displaySchedule(schedule) {
-  console.log('Displaying schedule:', schedule);
-  let scheduleHtml = `
+    function displaySchedule(schedule) {
+      console.log('Displaying schedule:', schedule);
+      let scheduleHtml = `
     <h3 class="text-base font-semibold cursor-pointer mb-2" id="accordionBtn">
       生成されたスケジュール
     </h3>
     <div id="scheduleAccordion" class="">
       <ul class="list-none">
   `;
-	let calendarEvents = [];
-  for (const date in schedule) {
-    scheduleHtml += `
+      let calendarEvents = [];
+      for (const date in schedule) {
+        scheduleHtml += `
       <li class="mb-2 text-sm">
         <div class="font-semibold py-0 px-1 bg-gray-200 hover:bg-gray-300 rounded cursor-pointer">
           ${date}
         </div>
         <ul id="schedule-${date}" class="list-disc pl-8 mt-2">
     `;
-    for (const task of schedule[date]) {
-      const roundedDuration = Math.round(task.duration * 10) / 10;
-      scheduleHtml += `<li class="text-xs">${task.name} (${roundedDuration}時間, ${task.start_time} - ${task.end_time})</li>`;
+        for (const task of schedule[date]) {
+          const roundedDuration = Math.round(task.duration * 10) / 10;
+          scheduleHtml += `<li class="text-xs">${task.name} (${roundedDuration}時間, ${task.start_time} - ${task.end_time})</li>`;
 
-      // カレンダーイベントを作成
-      const startDateTime = new Date(`${date}T${task.start_time}`);
-      const endDateTime = new Date(`${date}T${task.end_time}`);
-      calendarEvents.push({
-        title: task.name,
-        start: startDateTime.toISOString(),
-        end: endDateTime.toISOString(),
-        extendedProps: {
-          duration: roundedDuration,
-          description: task.description || '',
-          estimatedTime: task.estimated_time || 0,
-          priority: task.priority || '2',
+          // カレンダーイベントを作成
+          const startDateTime = new Date(`${date}T${task.start_time}`);
+          const endDateTime = new Date(`${date}T${task.end_time}`);
+          calendarEvents.push({
+            id: task.id, // タスクIDを追加
+            title: task.name,
+            start: startDateTime.toISOString(),
+            end: endDateTime.toISOString(),
+            extendedProps: {
+              duration: roundedDuration,
+              description: task.description || '',
+              estimatedTime: task.estimated_time || 0,
+              priority: task.priority || '2',
+            }
+          });
+
         }
-      });
+        scheduleHtml += '</ul></li>';
+      }
 
+      scheduleHtml += '</ul></div>';
+
+      scheduleOutput.innerHTML = scheduleHtml;
+      updateCalendar(calendarEvents);
+      scheduleOutput.classList.remove('hidden');
     }
-    scheduleHtml += '</ul></li>';
-  }
-
-  scheduleHtml += '</ul></div>';
-
-  scheduleOutput.innerHTML = scheduleHtml;
-  updateCalendar(calendarEvents);
-  scheduleOutput.classList.remove('hidden');
-}
+    
 
     function updateCalendar(events) {
       console.log('Updating calendar with events:', events);
@@ -292,7 +305,7 @@
       const taskStartDate = document.getElementById('editTaskStartDate').value;
       const taskStartTime = document.getElementById('editTaskStartTime').value;
       const taskPriority = document.getElementById('editTaskPriority').value;
-
+      const updateTaskUrl = "{{ route('tasks.update', ':taskId') }}";
       const event = calendar.getEventById(taskId);
       if (event) {
         event.remove();
@@ -325,34 +338,52 @@
       return `${hours}:${minutes}:${seconds}`;
     }
 
+
     function updateTask(event, isDropEvent = false) {
+      // event が undefined または null の場合のチェック
+      if (!event) {
+        console.error('Error: event is undefined or null');
+        alert('タスクの更新中にエラーが発生しました: イベントが見つかりません。');
+        return;
+      }
+
+      // event.id が undefined または null の場合のチェック
+      if (!event.id) {
+        console.error('Error: event.id is undefined or null');
+        alert('タスクの更新中にエラーが発生しました: イベントIDが見つかりません。');
+        return;
+      }
+
       const taskData = {
+        id: event.id,
         name: event.title,
-        description: event.extendedProps.description || '',
-        estimated_time: event.extendedProps.estimatedTime || 0,
-        start_date: event.start.toISOString().split('T')[0],
-        start_time: formatTime(event.start),
-        priority: event.extendedProps.priority || '2',
-        is_partial_update: isDropEvent // ここを追加
+        description: event.extendedProps?.description || '',
+        estimated_time: event.extendedProps?.estimatedTime || 0,
+        start_date: event.start ? event.start.toISOString().split('T')[0] : null,
+        start_time: event.start ? formatTime(event.start) : null,
+        end_date: event.end ? event.end.toISOString().split('T')[0] : null,
+        end_time: event.end ? formatTime(event.end) : null,
+        priority: event.extendedProps?.priority || '2',
+        is_partial_update: isDropEvent
       };
 
-      fetch(`/tasks/${event.id}`, {
+      console.log('Updating task with data:', taskData);
+
+      const url = updateTaskUrl.replace(':taskId', event.id);
+
+      fetch(url, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document
-              .querySelector('meta[name="csrf-token"]')
-              .getAttribute('content'),
-            Accept: 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json',
           },
           body: JSON.stringify(taskData),
         })
         .then(response => {
           if (!response.ok) {
             return response.json().then(data => {
-              throw new Error(
-                `HTTP error! status: ${response.status}, message: ${data.message || 'Unknown error'}`
-              );
+              throw new Error(`HTTP error! status: ${response.status}, message: ${data.message || 'Unknown error'}`);
             });
           }
           return response.json();
@@ -361,19 +392,31 @@
           if (data.success) {
             console.log('Task updated successfully', data.task);
             // 更新成功時の処理
+            // カレンダーイベントを更新
+            event.remove();
+            calendar.addEvent({
+              id: data.task.id,
+              title: data.task.name,
+              start: data.task.start_date ? `${data.task.start_date}T${data.task.start_time}` : null,
+              end: data.task.end_date ? `${data.task.end_date}T${data.task.end_time}` : null,
+              extendedProps: {
+                description: data.task.description,
+                estimatedTime: data.task.estimated_time,
+                priority: data.task.priority
+              }
+            });
+            alert('タスクの更新が完了しました。'); // 成功時のアラート
           } else {
             console.error('Failed to update task', data);
+            alert('タスクの更新に失敗しました。');
           }
         })
         .catch(error => {
           console.error('Error updating task:', error.message);
+          alert('タスクの更新中にエラーが発生しました: ' + error.message);
         });
     }
 
-    // ドラッグ＆ドロップ時のイベントハンドラ
-    calendar.on('eventDrop', function(info) {
-      updateTask(info.event, true);
-    });
 
     function reloadCalendarEvents() {
       fetch('/api/get-calendar-events') // サーバー側で最新のイベントデータを返すエンドポイントを作成
