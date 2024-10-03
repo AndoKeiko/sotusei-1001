@@ -63,7 +63,7 @@ Route::middleware(['auth'])->group(function () {
 
 
   // Task routes
-  Route::post('/update-task', [TaskController::class, 'updateTaskAjax'])->name('tasks.update.ajax');
+  Route::post('https://gajumaro.jp/yumekanau/update-task', [TaskController::class, 'updateTaskAjax'])->name('tasks.update.ajax');
   Route::post('/update-task-order', [TaskController::class, 'updateOrder'])->name('tasks.updateOrder');
 
   // Line routes
