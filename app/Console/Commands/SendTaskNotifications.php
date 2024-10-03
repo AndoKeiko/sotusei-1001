@@ -10,36 +10,50 @@ use Illuminate\Support\Facades\Mail;
 use App\Notifications\TaskReminder; 
 use Illuminate\Support\Facades\Notification;
 use App\Mail\ReminderMail;
+use Illuminate\Support\Facades\Log;
 
 class SendTaskNotifications extends Command
 {
-  protected $signature = 'app:send-task-notifications {minutes=15}';
-  protected $description = 'Send notifications for tasks starting soon';
+    protected $signature = 'app:send-task-notifications {minutes=15}';
+    protected $description = 'Send notifications for tasks starting soon';
 
+    public function handle()
+    {
+        $minutes = $this->argument('minutes');
+        $tasks = Task::whereNotNull('start_time')  // start_timeがnullでないもの
+            ->where('start_time', '>', Carbon::now())
+            ->where('start_time', '<=', Carbon::now()->addMinutes($minutes))
+            ->where('notified', false)
+            ->get();
 
-  public function handle()
-  {
-    $minutes = $this->argument('minutes');
-    $tasks = Task::where('start_time', '>', Carbon::now())
-      ->where('start_time', '<=', Carbon::now()->addMinutes($minutes))
-      ->where('notified', false)
-      ->get();
+        // タスクが存在しない場合
+        if ($tasks->isEmpty()) {
+            Log::info("No tasks found to notify within the next {$minutes} minutes.");
+        }
 
-    foreach ($tasks as $task) {
-      $user = $task->user;  // belongsTo リレーションを利用
+        foreach ($tasks as $task) {
+            $user = $task->user;  // belongsTo リレーションを利用
+            Log::info("Processing task ID: {$task->id} for user ID: {$user->id}");
 
-      // メール認証済みのユーザーにのみ送信
-      if ($user && $user->hasVerifiedEmail()) {
-        // メール送信
-        Mail::to($user->email)->send(new ReminderMail($task));
+            // メール認証済みのユーザーにのみ送信
+            if ($user && $user->hasVerifiedEmail()) {
+                Log::info("Sending notification for task ID: {$task->id}");
+                try {
+                    // メール送信
+                    Mail::to($user->email)->send(new ReminderMail($task));
+                    // 通知送信
+                    Notification::send($user, new TaskReminder($task));
+                    
+                    // 通知済みフラグを更新
+                    $task->notified = true;
+                    $task->save();
+                    Log::info("Task ID: {$task->id} has been notified.");
+                } catch (\Exception $e) {
+                    Log::error("Failed to send notification for task ID: {$task->id}, Error: " . $e->getMessage());
+                }
+            }
+        }
 
-        // 通知送信
-        Notification::send($user, new TaskReminder($task));
-        $task->notified = true;
-        $task->save();
-      }
+        $this->info('Task notifications sent successfully.');
     }
-
-    $this->info('Task notifications sent successfully.');
-  }
 }
