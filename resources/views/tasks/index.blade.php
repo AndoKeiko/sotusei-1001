@@ -124,7 +124,7 @@
         const start_time = row.querySelector('.task-time-input').value; 
         const start_date = row.querySelector('.task-time-input').value; 
 
-        fetch(`/update-task`, {
+        fetch(`https://gajumaro.jp/yumekanau/update-task`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
