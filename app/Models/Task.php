@@ -107,7 +107,7 @@ class Task extends Model
   public function getEndAttribute()
   {
     if ($this->start_date && $this->estimated_time) {
-      $startDateTime = Carbon::parse($this->start_date . ' ' . ($this->start_time ?? '00:00:00'));
+      $startDateTime = Carbon::parse($this->start_date . ' ' . ($this->start_time ?? '00:00'));
       return $startDateTime->addHours($this->estimated_time)->format('Y-m-d\TH:i');
     }
     return null;
@@ -118,7 +118,7 @@ class Task extends Model
   {
     // $this->start_date を Carbon インスタンスに変換
     $startDate = $this->start_date ? Carbon::parse($this->start_date) : Carbon::today();
-    $startTime = $this->start_time ? $this->start_time : '09:00:00';
+    $startTime = $this->start_time ? $this->start_time : '09:00';
 
     $startDateTime = Carbon::parse($startDate->format('Y-m-d') . ' ' . $startTime);
     $start = $startDateTime->format('Y-m-d\TH:i');

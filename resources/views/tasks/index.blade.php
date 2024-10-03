@@ -135,7 +135,7 @@
               estimated_time: time,
               priority,
               start_date: '2023-10-01', // 適切な日付を設定
-              start_time: '09:00:00' // 適切な時間を設定
+              start_time: '09:00' // 適切な時間を設定
             })
           })
           .then(response => {

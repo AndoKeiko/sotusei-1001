@@ -20,7 +20,7 @@ class UpdateWorkHoursAndStartTimeInGoalsTable extends Migration
 
             // work_start_time カラムを追加（既に存在しない場合）
             if (!Schema::hasColumn('goals', 'work_start_time')) {
-                $table->time('work_start_time')->default('09:00:00');
+                $table->time('work_start_time')->default('09:00');
             }
         });
     }
