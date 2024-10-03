@@ -53,11 +53,13 @@ Route::middleware(['auth'])->group(function () {
   Route::post('/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
   Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
 
+
   // スケジュール関連ルート
   Route::get('/goals/{goal}/schedules/create', [ScheduleController::class, 'create'])->name('schedules.create');
   Route::post('/goals/{goal}/schedules', [ScheduleController::class, 'store'])->name('schedules.store');
   Route::get('goals/{goal}/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
   Route::post('/goals/{goal}/schedule/generate', [ScheduleController::class, 'generate'])->name('goals.schedule.generate');
+  Route::post('/tasks/save-events', [ScheduleController::class, 'saveEvents'])->name('tasks.saveEvents');
 
 
   // Task routes

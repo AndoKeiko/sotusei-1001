@@ -1,12 +1,14 @@
 <?php
+
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use App\Models\Task;
 
-class TaskStartNotification extends Mailable
+class ReminderMail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -19,7 +21,10 @@ class TaskStartNotification extends Mailable
 
     public function build()
     {
-        return $this->view('emails.task-start-notification')
-                    ->subject('Your task is starting soon');
+        return $this->subject('Task Starting Soon')
+                    ->view('emails.reminder') // ビューのパス
+                    ->with([
+                        'task' => $this->task, // ビューに $task を渡す
+                    ]);
     }
 }

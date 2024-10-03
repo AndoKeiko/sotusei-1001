@@ -71,9 +71,9 @@ class Task extends Model
   public function getStartAttribute()
   {
     if ($this->start_date && $this->start_time) {
-      return Carbon::parse($this->start_date . ' ' . $this->start_time)->format('Y-m-d\TH:i:s');
+      return Carbon::parse($this->start_date . ' ' . $this->start_time)->format('Y-m-d\TH:i');
     } elseif ($this->start_date) {
-      return $this->start_date->format('Y-m-d\TH:i:s');
+      return $this->start_date->format('Y-m-d\TH:i');
     }
     return null;
   }
@@ -85,9 +85,9 @@ class Task extends Model
       return null;
     }
     try {
-      return Carbon::parse($value)->format('H:i:s');
+      return Carbon::parse($value)->format('H:i');
     } catch (\Exception $e) {
-      Log::warning("Invalid start_time format for task {$this->id}: {$value}");
+      Log::warning("Invalid start_time format for task {$this->id} (User ID: {$this->user_id}, Task Name: {$this->name}): {$value}");
       return null;
     }
   }
@@ -95,7 +95,12 @@ class Task extends Model
 
   public function setStartTimeAttribute($value)
   {
-    $this->attributes['start_time'] = Carbon::parse($value)->format('H:i:s');
+    try {
+      $this->attributes['start_time'] = Carbon::parse($value)->format('H:i');
+    } catch (\Exception $e) {
+      Log::warning("Invalid time format provided for start_time: {$value}");
+      $this->attributes['start_time'] = null; // 不正な場合はnullを設定
+    }
   }
 
   // 終了日時の取得
@@ -103,7 +108,7 @@ class Task extends Model
   {
     if ($this->start_date && $this->estimated_time) {
       $startDateTime = Carbon::parse($this->start_date . ' ' . ($this->start_time ?? '00:00:00'));
-      return $startDateTime->addHours($this->estimated_time)->format('Y-m-d\TH:i:s');
+      return $startDateTime->addHours($this->estimated_time)->format('Y-m-d\TH:i');
     }
     return null;
   }
@@ -111,37 +116,37 @@ class Task extends Model
   // カレンダーイベントの取得
   public function getCalendarEventAttribute()
   {
-      // $this->start_date を Carbon インスタンスに変換
-      $startDate = $this->start_date ? Carbon::parse($this->start_date) : Carbon::today();
-      $startTime = $this->start_time ? $this->start_time : '09:00:00';
-  
-      $startDateTime = Carbon::parse($startDate->format('Y-m-d') . ' ' . $startTime);
-      $start = $startDateTime->format('Y-m-d\TH:i:s');
-  
-      if ($this->end_date) {
-          $endDateTime = Carbon::parse($this->end_date);
-          $end = $endDateTime->format('Y-m-d\TH:i:s');
-      } else {
-          $estimatedHours = $this->estimated_time ?? 1;
-          $endDateTime = $startDateTime->copy()->addHours($estimatedHours);
-          $end = $endDateTime->format('Y-m-d\TH:i:s');
-      }
-  
-      return [
-          'id' => $this->id,
-          'title' => $this->name,
-          'start' => $start,
-          'end' => $end,
-          'extendedProps' => [
-              'description' => $this->description,
-              'priority' => $this->priority,
-              'estimatedTime' => $this->estimated_time,
-              'start_date' => $startDate->format('Y-m-d'),
-              'start_time' => $startTime,
-          ],
-      ];
+    // $this->start_date を Carbon インスタンスに変換
+    $startDate = $this->start_date ? Carbon::parse($this->start_date) : Carbon::today();
+    $startTime = $this->start_time ? $this->start_time : '09:00:00';
+
+    $startDateTime = Carbon::parse($startDate->format('Y-m-d') . ' ' . $startTime);
+    $start = $startDateTime->format('Y-m-d\TH:i');
+
+    if ($this->end_date) {
+      $endDateTime = Carbon::parse($this->end_date);
+      $end = $endDateTime->format('Y-m-d\TH:i');
+    } else {
+      $estimatedHours = $this->estimated_time ?? 1;
+      $endDateTime = $startDateTime->copy()->addHours($estimatedHours);
+      $end = $endDateTime->format('Y-m-d\TH:i');
+    }
+
+    return [
+      'id' => $this->id,
+      'title' => $this->name,
+      'start' => $start,
+      'end' => $end,
+      'extendedProps' => [
+        'description' => $this->description,
+        'priority' => $this->priority,
+        'estimatedTime' => $this->estimated_time,
+        'start_date' => $startDate->format('Y-m-d'),
+        'start_time' => $startTime,
+      ],
+    ];
   }
- 
+
 
 
   // リレーションシップ

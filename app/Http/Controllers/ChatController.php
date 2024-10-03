@@ -1,5 +1,5 @@
 <?php
-
+//使ってない他所に散乱
 namespace App\Http\Controllers;
 
 use App\Models\Goal;

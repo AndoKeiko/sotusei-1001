@@ -38,8 +38,8 @@ class ScheduleGeneratorService
           'id' => $task->id,  // タスクのIDを追加
           'name' => $task->name,
           'duration' => $timeForTask,
-          'start_time' => $taskStartTime->format('H:i:s'),
-          'end_time' => $taskStartTime->copy()->addHours($timeForTask)->format('H:i:s'),
+          'start_time' => $taskStartTime->format('H:i'),
+          'end_time' => $taskStartTime->copy()->addHours($timeForTask)->format('H:i'),
           'description' => $task->description,  // タスクの説明を追加
           'priority' => $task->priority,  // タスクの優先度を追加
         ];

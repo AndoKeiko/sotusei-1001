@@ -18,3 +18,10 @@ button {
 .accordion-opened .accordion-icon::after {
   transform: rotate(180deg);
 }
+.alert-danger {
+  color: #b94a48;
+  background-color: #f2dede;
+  border-color: #eed3d7;
+  padding: 10px;
+  border-radius: 5px;
+}

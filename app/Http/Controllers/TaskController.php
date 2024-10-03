@@ -31,15 +31,15 @@ class TaskController extends Controller
       'estimated_time' => 'required|numeric|min:0',
       'priority' => 'required|integer|min:1|max:3',
       'start_date' => 'nullable|date',
-      'start_time' => 'nullable|date_format:H:i:s',
+      'start_time' => 'nullable|date_format:H:i',
     ]);
 
     $task = new Task([
       'name' => $validatedData['name'],
       'estimated_time' => $validatedData['estimated_time'],
       'priority' => $validatedData['priority'],
-      'start_date' => $validatedData['start_date'] ?? null,
-      'start_time' => $validatedData['start_time'] ?? null,
+      $task->start_date = $validatedData['start_date'] ? Carbon::parse($validatedData['start_date'])->format('Y-m-d') : null;
+      $task->start_time = $validatedData['start_time'] ? Carbon::parse($validatedData['start_time'])->format('H:i') : null;      
   ]);
     $task->user_id = Auth::id();
     $task->goal_id = $goal->id;
@@ -57,7 +57,7 @@ class TaskController extends Controller
         'estimated_time' => 'required|numeric|min:0',
         'priority' => 'required|integer|min:1|max:3',
         'start_date' => 'required|date',
-        'start_time' => 'required|date_format:H:i:s',
+        'start_time' => 'required|date_format:H:i',
       ]);
 
       $task->update($validatedData);
@@ -75,7 +75,7 @@ class TaskController extends Controller
           continue; // 今更新したタスクはスキップ
         }
         $t->start_date = $currentDateTime->toDateString();
-        $t->start_time = $currentDateTime->toTimeString();
+        $t->start_time = $currentDateTime->format('H:i');
         $t->save();
 
         // 次の時間枠に移動
@@ -133,8 +133,8 @@ class TaskController extends Controller
           'name' => 'required|string|max:255',
           'description' => 'nullable|string',
           'estimated_time' => 'nullable|numeric',
-          'start_date' => 'required|date',
-          'start_time' => 'required',
+          'start_date' => 'nullable|date',
+          'start_time' => 'nullable|date_format:H:i',
           'priority' => 'required|integer|min:1|max:3',
       ]);
   

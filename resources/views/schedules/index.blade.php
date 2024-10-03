@@ -228,21 +228,21 @@
     function displaySchedule(schedule) {
       console.log('Displaying schedule:', schedule);
       let scheduleHtml = `
-    <h3 class="text-base font-semibold cursor-pointer mb-2" id="accordionBtn">
-      生成されたスケジュール
-    </h3>
-    <div id="scheduleAccordion" class="">
-      <ul class="list-none">
-  `;
+        <h3 class="text-base font-semibold cursor-pointer mb-2" id="accordionBtn">
+          生成されたスケジュール
+        </h3>
+        <div id="scheduleAccordion" class="">
+          <ul class="list-none">
+      `;
       let calendarEvents = [];
       for (const date in schedule) {
         scheduleHtml += `
-      <li class="mb-2 text-sm">
-        <div class="font-semibold py-0 px-1 bg-gray-200 hover:bg-gray-300 rounded cursor-pointer">
-          ${date}
-        </div>
-        <ul id="schedule-${date}" class="list-disc pl-8 mt-2">
-    `;
+          <li class="mb-2 text-sm">
+            <div class="font-semibold py-0 px-1 bg-gray-200 hover:bg-gray-300 rounded cursor-pointer">
+              ${date}
+            </div>
+            <ul id="schedule-${date}" class="list-disc pl-8 mt-2">
+        `;
         for (const task of schedule[date]) {
           const roundedDuration = Math.round(task.duration * 10) / 10;
           scheduleHtml += `<li class="text-xs">${task.name} (${roundedDuration}時間, ${task.start_time} - ${task.end_time})</li>`;
@@ -271,9 +271,10 @@
 
       scheduleOutput.innerHTML = scheduleHtml;
       updateCalendar(calendarEvents);
+      saveCalendarEvents(calendarEvents);
       scheduleOutput.classList.remove('hidden');
     }
-    
+
 
     function updateCalendar(events) {
       console.log('Updating calendar with events:', events);
@@ -441,6 +442,37 @@
     if (closeButton) {
       closeButton.addEventListener('click', closeTaskModal);
     }
+
+    function saveCalendarEvents(events) {
+      const saveEventsUrl = "{{ route('tasks.saveEvents') }}";
+      const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+      fetch(saveEventsUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': csrfToken,
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            events: events
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            console.log('Events saved successfully');
+          } else {
+            console.error('Failed to save events', data);
+          }
+        })
+        .catch(error => {
+          console.error('Error saving events:', error);
+        });
+    }
+
+
+
   });
 </script>
 @endpush

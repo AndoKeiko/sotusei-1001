@@ -48,8 +48,8 @@ class GoalController extends Controller
       'period_start' => 'required|date',
       'period_end' => 'required|date|after:period_start',
       'description' => 'nullable|string',
-      'work_hours_per_day' => 'nullable|numeric|min:0|max:24',
-      'work_start_time' => 'nullable|date_format:H:i:s',
+      'work_hours_per_day' => 'required|numeric|min:0|max:24',
+      'work_start_time' => 'required|date_format:H:i',
   ]);
 
   $goal = new Goal($validatedData);
@@ -96,7 +96,7 @@ class GoalController extends Controller
           'period_end' => 'required|date|after:period_start',
           'description' => 'nullable|string',
           'work_hours_per_day' => 'nullable|numeric|min:0|max:24',
-          'work_start_time' => 'nullable|date_format:H:i:s',
+          'work_start_time' => 'nullable|date_format:H:i',
           'status' => 'integer|min:0|max:1',
           'total_time' => 'integer|min:0',
           'progress_percentage' => 'integer|min:0|max:100',

@@ -10,20 +10,19 @@ use App\Notifications\TaskStartNotification;
 
 class SendTaskNotifications extends Command
 {
-    protected $signature = 'app:send-task-notifications';
+    protected $signature = 'app:send-task-notifications {minutes=15}';
     protected $description = 'Send notifications for tasks starting soon';
 
     public function handle()
     {
+        $minutes = $this->argument('minutes');
         $tasks = Task::where('start_time', '>', Carbon::now())
-                     ->where('start_time', '<=', Carbon::now()->addMinutes(15))
+                     ->where('start_time', '<=', Carbon::now()->addMinutes($minutes))
                      ->where('notified', false)
                      ->get();
 
         foreach ($tasks as $task) {
-            // ここでは、タスクの所有者に通知を送信すると仮定しています
             Notification::send($task->user, new TaskStartNotification($task));
-            
             $task->notified = true;
             $task->save();
         }
