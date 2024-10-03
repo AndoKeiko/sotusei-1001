@@ -24,7 +24,9 @@ class ReminderMail extends Mailable
         return $this->subject('Task Starting Soon')
                     ->view('emails.reminder') // ビューのパス
                     ->with([
-                        'task' => $this->task, // ビューに $task を渡す
+                        'taskName' => $this->task->name,
+                        'startTime' => $this->task->start_time,
+                        'description' => $this->task->description,
                     ]);
     }
 }

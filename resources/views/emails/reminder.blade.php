@@ -1,11 +1,16 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-    <title>Task Starting Soon</title>
+  <title>Task Starting Soon</title>
 </head>
+
 <body>
-    <h1>まもなく {{ $task->name }} の時間です！！</h1>
-    <p>Start Time: {{ $task->start_time }}</p>
-    <p>Description: {{ $task->description }}</p>
+  <p>こんにちは、</p>
+  <h1>まもなく {{ $taskName }} の時間です！！</h1>
+  <p>開始時間: {{ $startTime }}</p>
+  <p>詳細: {{ $description }}</p>
+  <p>準備はいいですか？</p>
 </body>
+
 </html>
