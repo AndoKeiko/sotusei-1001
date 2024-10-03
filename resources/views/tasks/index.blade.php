@@ -121,6 +121,8 @@
         const name = row.querySelector('.task-name-input').value;
         const time = row.querySelector('.task-time-input').value;
         const priority = row.querySelector('.task-priority-select').value;
+        const start_time = row.querySelector('.task-time-input').value; 
+        const start_date = row.querySelector('.task-time-input').value; 
 
         fetch(`/update-task`, {
             method: 'POST',

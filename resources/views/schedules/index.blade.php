@@ -370,6 +370,15 @@
 
       console.log('Updating task with data:', taskData);
 
+    // ここで start_time のフォーマットを確認
+    let startTime = taskData.start_time;
+    if (!/^\d{2}:\d{2}$/.test(startTime)) {
+        // start_time が H:i フォーマットでない場合、適切な形式に修正
+        console.error('Invalid start_time format');
+        alert('開始時間は H:i 形式で入力してください (例: 09:00)');
+        return;
+    }
+
       const url = updateTaskUrl.replace(':taskId', event.id);
 
       fetch(url, {
