@@ -38,9 +38,12 @@ class TaskController extends Controller
       'name' => $validatedData['name'],
       'estimated_time' => $validatedData['estimated_time'],
       'priority' => $validatedData['priority'],
-      $task->start_date = $validatedData['start_date'] ? Carbon::parse($validatedData['start_date'])->format('Y-m-d') : null;
-      $task->start_time = $validatedData['start_time'] ? Carbon::parse($validatedData['start_time'])->format('H:i') : null;      
-  ]);
+    ]);
+
+    // 日付と時間の割り当ては別途行う
+    $task->start_date = $validatedData['start_date'] ? Carbon::parse($validatedData['start_date'])->format('Y-m-d') : null;
+    $task->start_time = $validatedData['start_time'] ? Carbon::parse($validatedData['start_time'])->format('H:i') : null;
+
     $task->user_id = Auth::id();
     $task->goal_id = $goal->id;
     $task->save();
@@ -96,11 +99,11 @@ class TaskController extends Controller
 
   public function updateOrder(Request $request)
   {
-      $taskOrder = $request->input('taskOrder');
-      foreach ($taskOrder as $index => $taskId) {
-          Task::where('id', $taskId)->update(['order' => $index]);
-      }
-      return response()->json(['success' => true]);
+    $taskOrder = $request->input('taskOrder');
+    foreach ($taskOrder as $index => $taskId) {
+      Task::where('id', $taskId)->update(['order' => $index]);
+    }
+    return response()->json(['success' => true]);
   }
   public function show(Task $task)
   {
@@ -129,22 +132,20 @@ class TaskController extends Controller
 
   public function update(Request $request, Task $task)
   {
-      $validatedData = $request->validate([
-          'name' => 'required|string|max:255',
-          'description' => 'nullable|string',
-          'estimated_time' => 'nullable|numeric',
-          'start_date' => 'nullable|date',
-          'start_time' => 'nullable|date_format:H:i',
-          'priority' => 'required|integer|min:1|max:3',
-      ]);
-  
-      $task->update($validatedData);
-  
-      return response()->json([
-          'success' => true,
-          'task' => $task
-      ]);
-  }
+    $validatedData = $request->validate([
+      'name' => 'required|string|max:255',
+      'description' => 'nullable|string',
+      'estimated_time' => 'nullable|numeric',
+      'start_date' => 'nullable|date',
+      'start_time' => 'nullable|date_format:H:i',
+      'priority' => 'required|integer|min:1|max:3',
+    ]);
 
-  
+    $task->update($validatedData);
+
+    return response()->json([
+      'success' => true,
+      'task' => $task
+    ]);
+  }
 }
