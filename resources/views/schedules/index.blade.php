@@ -370,14 +370,38 @@
 
       console.log('Updating task with data:', taskData);
 
-    // ここで start_time のフォーマットを確認
-    let startTime = taskData.start_time;
-    if (!/^\d{2}:\d{2}$/.test(startTime)) {
-        // start_time が H:i フォーマットでない場合、適切な形式に修正
-        console.error('Invalid start_time format');
+
+
+      function formatTimeToHI(date) {
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+      }
+
+      function validateAndFixStartTime(startTime) {
+        // すでに H:i フォーマットであればそのまま返す
+        if (/^\d{2}:\d{2}$/.test(startTime)) {
+          return startTime;
+        }
+
+        // H:i 形式でない場合、適切な時刻を生成して返す（ここでは現在時刻を使用）
+        const date = new Date(); // 例: 現在時刻を使用
+        console.warn('Invalid start_time format, correcting to current time:', date);
+        return formatTimeToHI(date);
+      }
+
+      // タスクデータの start_time をチェックする部分
+      let startTime = taskData.start_time;
+      startTime = validateAndFixStartTime(startTime); // H:i に強制変換
+
+      if (!startTime) {
+        console.error('start_time is invalid and could not be corrected');
         alert('開始時間は H:i 形式で入力してください (例: 09:00)');
         return;
-    }
+      }
+
+      taskData.start_time = startTime; // 修正後の start_time を taskData に再代入
+
 
       const url = updateTaskUrl.replace(':taskId', event.id);
 
@@ -425,6 +449,20 @@
           console.error('Error updating task:', error.message);
           alert('タスクの更新中にエラーが発生しました: ' + error.message);
         });
+    }
+
+    function validateAndFixStartTime(time) {
+      const regex = /^\d{2}:\d{2}$/;
+      if (!regex.test(time)) {
+        const parsedTime = new Date(`1970-01-01T${time}`);
+        if (isNaN(parsedTime.getTime())) {
+          return null;
+        }
+        const hours = parsedTime.getHours().toString().padStart(2, '0');
+        const minutes = parsedTime.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+      }
+      return time;
     }
 
 
