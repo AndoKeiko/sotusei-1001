@@ -42,7 +42,7 @@
           </div>
           <div class="form-group">
             <label for="work_start_time">作業開始時間</label>
-            <input type="time" class="form-control mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" id="work_start_time" name="work_start_time" min="0" required>
+            <input type="time" class="form-control mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" id="work_start_time" name="work_start_time" required step="60">
           </div>
           <div class="form-group">
             <label for="work_hours_per_day">1日の作業時間</label>

@@ -42,6 +42,7 @@ class Task extends Model
     'elapsed_time' => 'integer',
     'estimated_time' => 'float',
     'start_date' => 'date:Y-m-d',
+    'start_time' => 'string',  // H:i形式の文字列として扱う
     'priority' => 'integer',
     'order' => 'integer',
     'review_interval' => 'string',
@@ -78,28 +79,30 @@ class Task extends Model
     return null;
   }
 
-  // 開始時間の取得と設定
+  // 開始時間の取得
   public function getStartTimeAttribute($value)
   {
     if (!$value) {
       return null;
     }
     try {
+      // 常にH:i形式で返す
       return Carbon::parse($value)->format('H:i');
     } catch (\Exception $e) {
-      Log::warning("Invalid start_time format for task {$this->id} (User ID: {$this->user_id}, Task Name: {$this->name}): {$value}");
+      Log::warning("Invalid start_time format for task {$this->id}: {$value}");
       return null;
     }
   }
 
-
+  // 開始時間の設定
   public function setStartTimeAttribute($value)
   {
     try {
+      // 常にH:i形式で保存
       $this->attributes['start_time'] = Carbon::parse($value)->format('H:i');
     } catch (\Exception $e) {
       Log::warning("Invalid time format provided for start_time: {$value}");
-      $this->attributes['start_time'] = null; // 不正な場合はnullを設定
+      $this->attributes['start_time'] = null;
     }
   }
 
@@ -116,9 +119,8 @@ class Task extends Model
   // カレンダーイベントの取得
   public function getCalendarEventAttribute()
   {
-    // $this->start_date を Carbon インスタンスに変換
     $startDate = $this->start_date ? Carbon::parse($this->start_date) : Carbon::today();
-    $startTime = $this->start_time ? $this->start_time : '09:00';
+    $startTime = $this->start_time ?? '09:00';
 
     $startDateTime = Carbon::parse($startDate->format('Y-m-d') . ' ' . $startTime);
     $start = $startDateTime->format('Y-m-d\TH:i');
@@ -146,8 +148,6 @@ class Task extends Model
       ],
     ];
   }
-
-
 
   // リレーションシップ
   public function user()

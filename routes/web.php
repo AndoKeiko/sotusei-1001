@@ -4,8 +4,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\HomeController;
-use App\Http\Controllers\LineLoginController;
 use App\Http\Controllers\LineController;
+use App\Http\Controllers\LineWebhookController;
 use App\Http\Controllers\ScheduleController;
 use Illuminate\Support\Facades\Route;
 
@@ -67,8 +67,9 @@ Route::middleware(['auth'])->group(function () {
   Route::post('/update-task-order', [TaskController::class, 'updateOrder'])->name('tasks.updateOrder');
 
   // Line routes
-  Route::post('/line/schedule-notification', [LineController::class, 'scheduleNotification'])->name('line.schedule-notification');
-  Route::post('/line/toggle-notifications', [LineController::class, 'toggleNotifications'])->name('line.toggle-notifications');
+  Route::get('/line/login', [LineController::class, 'redirectToLine'])->name('line.login');
+  Route::get('/line/callback', [LineController::class, 'handleLineCallback'])->name('line.callback');
+  Route::post('/line/webhook', [LineWebhookController::class, 'handleWebhook']);
 });
 
 require __DIR__ . '/auth.php';

@@ -11,7 +11,6 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
-
 class ScheduleController extends Controller
 {
   protected $scheduleGenerator;
@@ -20,7 +19,6 @@ class ScheduleController extends Controller
   {
     $this->scheduleGenerator = $scheduleGenerator;
   }
-
 
   public function index(Goal $goal)
   {
@@ -55,10 +53,6 @@ class ScheduleController extends Controller
     ]);
   }
 
-
-
-
-
   public function generateSchedule($goal, $startDate, $startTime, $hoursPerDay)
   {
     // 最新のタスク情報を取得
@@ -71,11 +65,11 @@ class ScheduleController extends Controller
       // タスクに `start_date` と `start_time` が設定されている場合、それを使用
       if ($task->start_date && $task->start_time) {
         $currentDate = Carbon::parse($task->start_date);
-        $currentTime = Carbon::parse($task->start_time);
+        $currentTime = Carbon::parse($task->start_time)->format('H:i');
       } else {
         // タスクに日時が設定されていない場合、デフォルトの開始日時を使用
         $currentDate = Carbon::parse($startDate);
-        $currentTime = Carbon::parse($startTime);
+        $currentTime = Carbon::parse($startTime)->format('H:i');
       }
 
       $taskDuration = $task->estimated_time; // タスクの所要時間
@@ -83,8 +77,8 @@ class ScheduleController extends Controller
       $schedule[$currentDate->toDateString()][] = [
         'id' => $task->id,
         'name' => $task->name,
-        'start_time' => $currentTime->format('H:i'),
-        'end_time' => $currentTime->copy()->addHours($taskDuration)->format('H:i'),
+        'start_time' => $currentTime,
+        'end_time' => Carbon::parse($currentTime)->addHours($taskDuration)->format('H:i'),
         'duration' => $taskDuration,
         'description' => $task->description,
         'estimated_time' => $task->estimated_time,
@@ -92,16 +86,13 @@ class ScheduleController extends Controller
       ];
 
       // 次のタスクの開始時間を調整
-      $currentTime->addHours($taskDuration);
+      $currentTime = Carbon::parse($currentTime)->addHours($taskDuration)->format('H:i');
 
       // 1日の作業時間を超えた場合の処理などを追加
     }
 
     return $schedule;
   }
-
-
-
 
   public function show(Goal $goal)
   {
@@ -120,12 +111,10 @@ class ScheduleController extends Controller
     return view('schedules.index', compact('goal', 'schedule', 'goalId', 'calendarEvents'));
   }
 
-
   public function create(Goal $goal)
   {
     return view('schedules.create', compact('goal'));
   }
-
 
   public function store(Request $request, Goal $goal)
   {
@@ -148,7 +137,6 @@ class ScheduleController extends Controller
     return redirect()->route('schedules.index', $goal)->with('success', 'スケジュールが生成されました');
   }
 
-
   public function generate(Request $request, Goal $goal)
   {
     Log::info('Schedule generation request', $request->all());
@@ -156,7 +144,7 @@ class ScheduleController extends Controller
 
     $validatedData = $request->validate([
       'work_period_start' => 'required|date',
-      'work_start_time' => 'required',
+      'work_start_time' => 'required|date_format:H:i',
       'work_hours_per_day' => 'required|numeric|min:0|max:24',
     ]);
 
@@ -182,14 +170,14 @@ class ScheduleController extends Controller
 
     foreach ($schedule as $date => $tasks) {
       foreach ($tasks as $task) {
-        $startDateTime  = Carbon::parse($date . ' ' . $task['start_time']);
+        $startDateTime = Carbon::parse($date . ' ' . $task['start_time']);
         $endDateTime = Carbon::parse($date . ' ' . $task['end_time']);
 
         $events[] = [
-          'id' => $task['id'], // タスクIDを追加
+          'id' => $task['id'],
           'title' => $task['name'],
-          'start' => $startDateTime->toIso8601String(),
-          'end' => $endDateTime->toIso8601String(),
+          'start' => $startDateTime->format('Y-m-d\TH:i'),
+          'end' => $endDateTime->format('Y-m-d\TH:i'),
           'extendedProps' => [
             'duration' => $task['duration'],
             'description' => $task['description'] ?? '',
@@ -215,8 +203,8 @@ class ScheduleController extends Controller
         $events[] = [
           'id' => $task['id'] ?? uniqid(),
           'title' => $task['name'],
-          'start' => $startDateTime->toIso8601String(),
-          'end' => $endDateTime->toIso8601String(),
+          'start' => $startDateTime->format('Y-m-d\TH:i'),
+          'end' => $endDateTime->format('Y-m-d\TH:i'),
           'extendedProps' => [
             'duration' => $task['duration'],
             'description' => $task['description'] ?? '',
@@ -230,27 +218,26 @@ class ScheduleController extends Controller
     return $events;
   }
 
-
   public function saveEvents(Request $request)
   {
     try {
-    $events = $request->input('events');
+      $events = $request->input('events');
 
-    foreach ($events as $event) {
-      $task = Task::findOrNew($event['id']);
-      $task->name = $event['title'];
-      $task->start_date = Carbon::parse($event['start'])->format('Y-m-d');
-      $task->start_time = Carbon::parse($event['start'])->format('H:i');
-      $task->estimated_time = $event['extendedProps']['duration'];
-      $task->description = $event['extendedProps']['description'];
-      $task->priority = $event['extendedProps']['priority'];
-      $task->save();
+      foreach ($events as $event) {
+        $task = Task::findOrNew($event['id']);
+        $task->name = $event['title'];
+        $task->start_date = Carbon::parse($event['start'])->format('Y-m-d');
+        $task->start_time = Carbon::parse($event['start'])->format('H:i');
+        $task->estimated_time = $event['extendedProps']['duration'];
+        $task->description = $event['extendedProps']['description'];
+        $task->priority = $event['extendedProps']['priority'];
+        $task->save();
+      }
+
+      return response()->json(['success' => true]);
+    } catch (\Exception $e) {
+      Log::error('Error saving events: ' . $e->getMessage());
+      return response()->json(['success' => false, 'message' => 'An error occurred while saving events'], 500);
     }
-
-    return response()->json(['success' => true]);
-  } catch (\Exception $e) {
-    Log::error('Error saving events: ' . $e->getMessage());
-    return response()->json(['success' => false, 'message' => 'An error occurred while saving events'], 500);
   }
-}
 }

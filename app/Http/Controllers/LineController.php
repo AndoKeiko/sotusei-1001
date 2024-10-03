@@ -2,126 +2,133 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\SendLineNotificationJob;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Auth;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Auth;
+use App\Jobs\SendLineNotificationJob; // LINE通知用のジョブ
+use App\Notifications\TaskReminder; // メール通知
+
 
 class LineController extends Controller
 {
-  public function login()
+  // LINEログインのリダイレクト処理
+  public function redirectToLine()
   {
-    // LINE ログインのリダイレクト処理
-    Log::debug('Login method called');
+    $state = Str::random(40); // LaravelのStrヘルパーを使用
+    session(['line_login_state' => $state]); // セッションに保存
+    Log::info('Session state: ' . session('line_login_state'));
 
-    // LINE ログイン URL のベース
-    $line_login_url = 'https://access.line.me/oauth2/v2.1/authorize?';
+    // LINEの認証URLにリダイレクト
+    $lineLoginUrl = "https://access.line.me/oauth2/v2.1/authorize?response_type=code&client_id=" . env('LINE_LOGIN_CHANNEL_ID') .
+      "&redirect_uri=" . urlencode(env('LINE_REDIRECT_URI')) . "&state=" . $state . "&scope=profile%20openid";
 
-    // 環境設定からLINEチャンネルIDを取得
-    $client_id = config('services.line.channel_id');
-
-    // リダイレクトURIの生成
-    $redirect_uri = route('line.callback');  // ここでルート名が正しいか確認
-    if (!$redirect_uri) {
-      Log::error('Redirect URI could not be generated.');
-      return redirect()->route('login')->withErrors('リダイレクトURLの生成に失敗しました。');
-    }
-
-    // CSRFトークンを生成
-    $state = Str::random(40);  // セッション管理のためのランダムなトークン
-    Log::debug('Generated CSRF State Token: ' . $state);
-
-    // LINE ログインのパラメータを構築
-    $query_params = [
-      'response_type' => 'code',
-      'client_id' => $client_id,
-      'redirect_uri' => $redirect_uri,
-      'state' => $state,
-      'scope' => 'profile openid email',  // 必要なスコープに応じて修正
-    ];
-
-    // 完全なLINE ログイン URL を構築
-    $line_login_url .= http_build_query($query_params);
-    Log::debug('Final LINE Login URL: ' . $line_login_url);
-
-    // セッションにstateを保存する
-    session(['line_login_state' => $state]);
-    Log::debug('State token saved in session: ' . session('line_login_state'));
-
-    // LINEの認証ページにリダイレクト
-    return redirect($line_login_url);
+    return redirect($lineLoginUrl);
   }
 
-
-  public function callback(Request $request)
+  // LINEログインのコールバック処理
+  public function handleLineCallback(Request $request)
   {
-    // LINE ログインのコールバック処理
-    $code = $request->input('code');
-    $state = $request->input('state');
+    $stateFromSession = session('line_login_state'); // セッションからstateを取得
+    $stateFromRequest = $request->input('state'); // リクエストからstateを取得
+    Log::info('Request state: ' . $request->input('state'));
 
-    // stateの検証（CSRFトークンの代わりにセッションで保存された値を比較）
-    if ($state !== session('line_login_state')) {
-      return redirect()->route('login')->with('error', 'Invalid state parameter');
+    // stateが一致しない場合のエラーハンドリング
+    if ($stateFromSession !== $stateFromRequest) {
+      Log::error('State mismatch. Possible CSRF attack.');
+      return redirect()->route('login')->with('error', 'Invalid state parameter.');
     }
 
-    // アクセストークンの取得処理
-    $response = Http::post('https://api.line.me/oauth2/v2.1/token', [
+    $code = $request->input('code');
+
+    // アクセストークンを取得するためにLINEにリクエスト
+    $response = Http::asForm()->post('https://api.line.me/oauth2/v2.1/token', [
       'grant_type' => 'authorization_code',
       'code' => $code,
-      'redirect_uri' => route('line.callback'),
+      'redirect_uri' => env('LINE_REDIRECT_URI'),
       'client_id' => env('LINE_LOGIN_CHANNEL_ID'),
       'client_secret' => env('LINE_LOGIN_CHANNEL_SECRET'),
     ]);
 
-    $responseData = $response->json();
-
-    // アクセストークン取得時のエラーハンドリング
-    if (!$response->ok() || !isset($responseData['access_token'])) {
-      Log::error('Failed to retrieve access token', ['response' => $responseData]);
-      return redirect()->route('login')->with('error', 'Failed to retrieve access token from LINE.');
+    if ($response->failed()) {
+      Log::error('LINE認証失敗: ' . $response->body());
+      return redirect()->route('login')->with('error', 'LINE認証に失敗しました');
     }
 
-    $accessToken = $responseData['access_token'];
+    $accessToken = $response->json()['access_token'];
 
-    // ユーザー情報の取得
-    $userInfo = Http::withHeaders([
-      'Authorization' => 'Bearer ' . $accessToken
-    ])->get('https://api.line.me/v2/profile')->json();
+    // LINEプロフィール情報を取得
+    $profileResponse = Http::withHeaders([
+      'Authorization' => 'Bearer ' . $accessToken,
+    ])->get('https://api.line.me/v2/profile');
 
-    if (!$userInfo || !isset($userInfo['userId'])) {
-      Log::error('Failed to retrieve user info from LINE', ['userInfo' => $userInfo]);
-      return redirect()->route('login')->with('error', 'Failed to retrieve user info from LINE.');
+    if ($profileResponse->failed()) {
+      Log::error('LINEプロフィール取得失敗: ' . $profileResponse->body());
+      return redirect()->route('login')->with('error', 'LINEプロフィールの取得に失敗しました');
     }
 
-    // ユーザーのLINE情報を保存
-    $user = auth()->user();
-    $user->line_user_id = $userInfo['userId'];
-    $user->save();
+    $lineUserId = $profileResponse->json()['userId'];
+    $displayName = $profileResponse->json()['displayName'];
 
-    // 成功時にgoalsへリダイレクト
-    return redirect()->route('goals.index')->with('success', 'LINE account linked successfully.');
+    // 既存のユーザーか確認し、なければ新規作成
+    $user = User::where('line_user_id', $lineUserId)
+      ->orWhere('email', $lineUserId . '@line.com') // 既存のメールアドレスを検索
+      ->first();
+
+    if (!$user) {
+      // ユーザーが存在しない場合は新規作成
+      $user = User::create([
+        'name' => $displayName,
+        'line_user_id' => $lineUserId,
+        'email' => $lineUserId . '@line' . time() . '.com', // ユニークなメールアドレスを生成
+        'password' => bcrypt(Str::random(16)), // ダミーのパスワードを設定
+      ]);
+    }
+
+    // ユーザーをログインさせる
+    Auth::login($user, true);
+
+    // 認証後に /goals へリダイレクト
+    return redirect('/goals');
   }
 
-
+  // LINE通知のスケジュール
   public function scheduleNotification($userId, $message)
   {
-      // LINE通知を送信するジョブをディスパッチ
-      SendLineNotificationJob::dispatch($userId, $message);
-      return response()->json(['success' => true, 'message' => 'Notification queued for sending']);
+    SendLineNotificationJob::dispatch($userId, $message);
+    return response()->json(['success' => true, 'message' => 'Notification queued for sending']);
   }
 
+  // LINE通知のトグル（オン・オフ切り替え）
   public function toggleNotifications(Request $request)
   {
-      // ユーザーの通知設定をトグル（オン・オフ切り替え）
-      $user = auth()->user();
-      $user->notifications_enabled = !$user->notifications_enabled;
-      $user->save();
+    $user = auth()->user();
+    $user->notifications_enabled = !$user->notifications_enabled;
+    $user->save();
 
-      return response()->json([
-          'success' => true,
-          'notifications_enabled' => $user->notifications_enabled
-      ]);
+    return response()->json([
+      'success' => true,
+      'notifications_enabled' => $user->notifications_enabled
+    ]);
   }
+
+  public function sendNotification(User $user, Task $task)
+  {
+      if ($task->start_time) { // start_timeが設定されているか確認
+          if ($user->isLineAuthenticated()) {
+              // LINE認証済みの場合はLINE通知を送信
+              SendLineNotificationJob::dispatch($user->id, $task->name . ' のタスクが開始されます');
+          } elseif ($user->isEmailAuthenticated()) {
+              // メール認証済みの場合はメール通知を送信
+              $user->notify(new TaskReminder($task));
+          } else {
+              Log::warning("User {$user->id} has no valid authentication for notification.");
+          }
+      } else {
+          Log::warning("Task {$task->id} has no start_time. No notification sent.");
+      }
+  }
+  
 }

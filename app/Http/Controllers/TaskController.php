@@ -60,7 +60,7 @@ class TaskController extends Controller
         'estimated_time' => 'required|numeric|min:0',
         'priority' => 'required|integer|min:1|max:3',
         'start_date' => 'required|date',
-        'start_time' => 'required|date_format:H:i',
+        'start_time' => 'nullable|date_format:H:i',
       ]);
 
       $task->update($validatedData);
@@ -72,7 +72,7 @@ class TaskController extends Controller
         ->get();
 
       // スケジュールの再計算
-      $currentDateTime = Carbon::parse($validatedData['start_date'] . ' ' . $validatedData['start_time']);
+      $currentDateTime = Carbon::parse($validatedData['start_date'] . ' ' . $validatedData['start_time'] ?? '09:00');
       foreach ($allTasks as $t) {
         if ($t->id === $task->id) {
           continue; // 今更新したタスクはスキップ
@@ -140,6 +140,10 @@ class TaskController extends Controller
       'start_time' => 'nullable|date_format:H:i',
       'priority' => 'required|integer|min:1|max:3',
     ]);
+
+    if (isset($validatedData['start_time'])) {
+      $validatedData['start_time'] = Carbon::parse($validatedData['start_time'])->format('H:i');
+    }
 
     $task->update($validatedData);
 

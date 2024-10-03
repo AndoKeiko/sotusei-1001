@@ -7,9 +7,9 @@
 
 <body>
   <p>こんにちは、</p>
-  <h1>まもなく {{ $taskName }} の時間です！！</h1>
-  <p>開始時間: {{ $startTime }}</p>
-  <p>詳細: {{ $description }}</p>
+  <h1>まもなく {{ $task->name }} の時間です！！</h1>
+  <p>開始時間: {{ $task->start_time }}</p>
+
   <p>準備はいいですか？</p>
 </body>
 

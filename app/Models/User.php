@@ -39,5 +39,14 @@ class User extends Authenticatable
         'avatar' => 'string',
     ];
 
-
+    public function isLineAuthenticated()
+    {
+        return !is_null($this->line_user_id); // line_user_idが存在するかどうかを確認
+    }
+    
+    public function isEmailAuthenticated()
+    {
+        return !is_null($this->email_verified_at); // メール認証済みかどうかを確認
+    }
+    
 }
