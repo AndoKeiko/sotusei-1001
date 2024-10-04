@@ -12,16 +12,18 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use App\Notifications\TaskReminder;
 use App\Services\NotificationService;
+use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Foundation\Application;
 
 class Kernel extends ConsoleKernel
 {
 
   protected $notificationService;
 
-  public function __construct()
+  public function __construct(Application $app, Dispatcher $events)
   {
-    parent::__construct();
-    $this->notificationService = new NotificationService();
+      parent::__construct($app, $events);
+      $this->notificationService = new NotificationService();
   }
 
   protected function schedule(Schedule $schedule): void
