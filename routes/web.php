@@ -3,14 +3,12 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\TaskController;
-use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LineController;
 use App\Http\Controllers\LineWebhookController;
 use App\Http\Controllers\ScheduleController;
-use App\Http\Controllers\CalendarController;
-use App\Http\Controllers\LineLoginController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
-
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
   return Auth::check() ? redirect()->route('goals.index') : redirect()->route('login');
@@ -28,6 +26,7 @@ Route::get('/home', function () {
 // Route::get('/callback', [LineLoginController::class, 'handleLineCallback'])->name('line.callback');
 
 Route::middleware(['auth'])->group(function () {
+  Route::post('/update-notification-settings', [UserController::class, 'updateNotificationSettings'])->name('update.notification.settings');
   // Profile routes
   Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
   Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

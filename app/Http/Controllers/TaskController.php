@@ -202,6 +202,7 @@ class TaskController extends Controller
   public function saveAll(Request $request)
   {
       $tasks = $request->input('tasks');
+      $notifications = $request->input('notifications');
       
       DB::beginTransaction();
       try {
@@ -211,6 +212,11 @@ class TaskController extends Controller
               $task->update($taskData);
               $updatedTasks[] = $task->fresh();
           }
+          $user = Auth::user();
+          $user->email_notifications = $notifications['email'];
+          $user->line_notifications = $notifications['line'];
+          $user->save();
+
           DB::commit();
           return response()->json(['success' => true, 'message' => 'All tasks saved successfully', 'tasks' => $updatedTasks]);
       } catch (\Exception $e) {

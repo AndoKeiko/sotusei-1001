@@ -9,14 +9,18 @@ class AddEndTimeToTasksTable extends Migration
     public function up()
     {
         Schema::table('tasks', function (Blueprint $table) {
-            $table->time('end_time')->nullable()->after('start_time');
+            if (!Schema::hasColumn('tasks', 'end_time')) {
+                $table->time('end_time')->nullable()->after('start_time');
+            }
         });
     }
 
     public function down()
     {
         Schema::table('tasks', function (Blueprint $table) {
-            $table->dropColumn('end_time');
+            if (Schema::hasColumn('tasks', 'end_time')) {
+                $table->dropColumn('end_time');
+            }
         });
     }
 }

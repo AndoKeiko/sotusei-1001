@@ -33,12 +33,12 @@
 
         <div id="scheduleOutput" class="mt-4 p-4 border rounded-md hidden accordion-collapse" data-accordion="collapse"></div>
         <button id="saveAllTasksBtn" class="mt-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
-          全てのタスクを保存
+          全てのタスク・通知設定を保存
         </button>
         <div id="calendar" class="mt-8"></div>
         <ul class="flex flex-nowrap flex-row justify-start items-center mt-4">
           <li> <a id="saveAllTasksBtn" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
-              全てのタスクを保存
+          全てのタスク・通知設定を保存
             </a></li>
           <li>
             <a href="{{ route('goals.index', $goal) }}" class="px-4 py-2 ml-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">目標ページに戻る</a>
@@ -47,6 +47,17 @@
             <a href="{{ route('tasks.index', $goal) }}" class="px-4 py-2 ml-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">タスク一覧に戻る</a>
           </li>
         </ul>
+        <div class="mt-4 p-4 border rounded-md">
+          <h3 class="text-lg font-semibold mb-2">通知設定</h3>
+          <div class="flex items-center mb-2">
+            <input type="checkbox" id="emailNotifications" class="mr-2" {{ auth()->user()->email_notifications ? 'checked' : '' }}>
+            <label for="emailNotifications">メール通知（メール認証の方のみ）</label>
+          </div>
+          <div class="flex items-center">
+            <input type="checkbox" id="lineNotifications" class="mr-2" {{ auth()->user()->line_notifications ? 'checked' : '' }}>
+            <label for="lineNotifications">LINE通知（LINE認証の方のみ）</label>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -313,7 +324,7 @@
         const startDate = event.start.toISOString().split('T')[0];
         const endDate = event.end ? event.end.toISOString().split('T')[0] : startDate;
         const startTime = dateToHi(event.start);
-        const endTime = event.end ? dateToHi(event.end) : '10:00'; // デフォルトの終了時間を10:00に設定
+        const endTime = event.end ? dateToHi(event.end) : '10:00';
 
         return {
           id: event.id,
@@ -331,6 +342,12 @@
 
       console.log('Saving all tasks:', tasksToSave);
 
+      const emailNotifications = document.getElementById('emailNotifications').checked;
+      const lineNotifications = document.getElementById('lineNotifications').checked;
+
+      console.log('Saving all tasks:', tasksToSave);
+      console.log('Notification settings:', { emailNotifications, lineNotifications });
+
       const saveUrl = "{{ route('tasks.saveAll') }}";
 
       fetch(saveUrl, {
@@ -341,13 +358,17 @@
             'Accept': 'application/json',
           },
           body: JSON.stringify({
-            tasks: tasksToSave
+            tasks: tasksToSave,
+            notifications: {
+              email: emailNotifications,
+              line: lineNotifications
+            }
           }),
         })
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            console.log('All tasks saved successfully', data);
+            console.log('All tasks and notification settings saved successfully', data);
             // カレンダーイベントを更新
             calendar.removeAllEvents();
             data.tasks.forEach(task => {
@@ -610,6 +631,37 @@
         })
         .catch(error => {
           console.error('Error saving events:', error);
+        });
+    }
+
+    document.getElementById('emailNotifications').addEventListener('change', updateNotificationSettings);
+    document.getElementById('lineNotifications').addEventListener('change', updateNotificationSettings);
+
+    function updateNotificationSettings() {
+      const emailNotifications = document.getElementById('emailNotifications').checked;
+      const lineNotifications = document.getElementById('lineNotifications').checked;
+
+      fetch("{{ route('update.notification.settings') }}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+          },
+          body: JSON.stringify({
+            email_notifications: emailNotifications,
+            line_notifications: lineNotifications
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            console.log('通知設定が更新されました');
+          } else {
+            console.error('通知設定の更新に失敗しました');
+          }
+        })
+        .catch(error => {
+          console.error('エラー:', error);
         });
     }
 

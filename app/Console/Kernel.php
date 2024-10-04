@@ -95,6 +95,7 @@ class Kernel extends ConsoleKernel
   protected function sendNotification(User $user, Task $task)
   {
       $this->notificationService->sendNotification($user, $task);
+      
   }
 
   protected function commands(): void
