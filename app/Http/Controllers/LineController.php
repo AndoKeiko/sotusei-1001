@@ -10,10 +10,18 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Jobs\SendLineNotificationJob; // LINE通知用のジョブ
 use App\Notifications\TaskReminder; // メール通知
-
+use App\Services\NotificationService;
 
 class LineController extends Controller
 {
+
+  protected $notificationService;
+
+  public function __construct()
+  {
+    $this->notificationService = new NotificationService();
+  }
+
   // LINEログインのリダイレクト処理
   public function redirectToLine()
   {
@@ -97,10 +105,15 @@ class LineController extends Controller
   // LINE通知のスケジュール
   public function scheduleNotification($userId, $message = 'デフォルトのメッセージ')
   {
-      SendLineNotificationJob::dispatch($userId, $message);
-      return response()->json(['success' => true, 'message' => 'Notification queued for sending']);
+    SendLineNotificationJob::dispatch($userId, $message);
+    return response()->json(['success' => true, 'message' => 'Notification queued for sending']);
   }
-  
+
+
+  public function sendNotification(User $user, Task $task)
+  {
+    $this->notificationService->sendNotification($user, $task);
+  }
 
   // LINE通知のトグル（オン・オフ切り替え）
   public function toggleNotifications(Request $request)
@@ -114,22 +127,4 @@ class LineController extends Controller
       'notifications_enabled' => $user->notifications_enabled
     ]);
   }
-
-  public function sendNotification(User $user, Task $task)
-  {
-      if ($task->start_time) { // start_timeが設定されているか確認
-          if ($user->isLineAuthenticated()) {
-              // LINE認証済みの場合はLINE通知を送信
-              SendLineNotificationJob::dispatch($user->id, $task->name . ' のタスクが開始されます');
-          } elseif ($user->isEmailAuthenticated()) {
-              // メール認証済みの場合はメール通知を送信
-              $user->notify(new TaskReminder($task));
-          } else {
-              Log::warning("User {$user->id} has no valid authentication for notification.");
-          }
-      } else {
-          Log::warning("Task {$task->id} has no start_time. No notification sent.");
-      }
-  }
-  
 }
