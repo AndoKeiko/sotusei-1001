@@ -33,6 +33,7 @@ class Task extends Model
     'repetition_count',
     'last_notification_sent',
     'end_date',
+    'end_time',
   ];
 
   // キャスト（データ型の変換）
@@ -49,6 +50,7 @@ class Task extends Model
     'repetition_count' => 'integer',
     'last_notification_sent' => 'datetime',  // これは適切にキャスト
     'end_date' => 'string',      // stringとして扱い、フォーマットは手動で管理
+    'end_time' => 'string',
   ];
 
   // ルートキー名の設定
@@ -56,6 +58,10 @@ class Task extends Model
   {
     return 'id';
   }
+
+  protected $attributes = [
+    'end_time' => '10:00',  // デフォルトの終了時間を10:00に設定
+  ];
 
   // 定数の定義
   public const REVIEW_INTERVALS = [
@@ -95,21 +101,24 @@ class Task extends Model
   // 開始時間の設定
   public function setStartTimeAttribute($value)
   {
-      try {
-          // フォーマットが不正でもそのまま保存
-          $this->attributes['start_time'] = $value;
-      } catch (\Exception $e) {
-          Log::warning("Invalid time format provided for start_time: {$value}");
-          $this->attributes['start_time'] = null;
-      }
+    try {
+      // フォーマットが不正でもそのまま保存
+      $this->attributes['start_time'] = $value;
+    } catch (\Exception $e) {
+      Log::warning("Invalid time format provided for start_time: {$value}");
+      $this->attributes['start_time'] = null;
+    }
   }
-  
+
 
   // 終了日時の取得
   public function getEndAttribute()
   {
-    if ($this->start_date && $this->estimated_time) {
-      $startDateTime = Carbon::parse($this->start_date . ' ' . ($this->start_time ?? '00:00'));
+    if ($this->end_date && $this->end_time) {
+      return $this->end_date . 'T' . $this->end_time;
+    }
+    if ($this->start_date && $this->start_time && $this->estimated_time) {
+      $startDateTime = Carbon::parse($this->start_date . ' ' . $this->start_time);
       return $startDateTime->addHours($this->estimated_time)->format('Y-m-d\TH:i');
     }
     return null;
@@ -124,8 +133,8 @@ class Task extends Model
     $startDateTime = Carbon::parse($startDate->format('Y-m-d') . ' ' . $startTime);
     $start = $startDateTime->format('Y-m-d\TH:i');
 
-    if ($this->end_date) {
-      $endDateTime = Carbon::parse($this->end_date);
+    if ($this->end_date && $this->end_time) {
+      $endDateTime = Carbon::parse($this->end_date . ' ' . $this->end_time);
       $end = $endDateTime->format('Y-m-d\TH:i');
     } else {
       $estimatedHours = $this->estimated_time ?? 1;
@@ -144,9 +153,35 @@ class Task extends Model
         'estimatedTime' => $this->estimated_time,
         'start_date' => $startDate->format('Y-m-d'),
         'start_time' => $startTime,
+        'end_date' => $this->end_date,
+        'end_time' => $this->end_time,
       ],
     ];
   }
+
+  public function getEndTimeAttribute($value)
+  {
+    if (!$value) {
+      return null;
+    }
+    try {
+      return $value;
+    } catch (\Exception $e) {
+      Log::warning("Invalid end_time format for task {$this->id}: {$value}");
+      return null;
+    }
+  }
+
+  public function setEndTimeAttribute($value)
+  {
+    try {
+      $this->attributes['end_time'] = $value;
+    } catch (\Exception $e) {
+      Log::warning("Invalid time format provided for end_time: {$value}");
+      $this->attributes['end_time'] = null;
+    }
+  }
+
 
   // リレーションシップ
   public function user()

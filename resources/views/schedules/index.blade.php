@@ -32,14 +32,21 @@
         <button id="generateScheduleBtn" class="mb-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">スケジュール生成</button>
 
         <div id="scheduleOutput" class="mt-4 p-4 border rounded-md hidden accordion-collapse" data-accordion="collapse"></div>
-
+        <button id="saveAllTasksBtn" class="mt-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
+          全てのタスクを保存
+        </button>
         <div id="calendar" class="mt-8"></div>
-        <div class="mt-8">
-          <a href="{{ route('goals.index', $goal) }}" class="text-blue-600 hover:text-blue-800">目標ページに戻る</a>
-        </div>
-        <div class="mt-8">
-          <a href="{{ route('tasks.index', $goal) }}" class="text-blue-600 hover:text-blue-800">タスク一覧に戻る</a>
-        </div>
+        <ul class="flex flex-nowrap flex-row justify-start items-center mt-4">
+          <li> <a id="saveAllTasksBtn" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
+              全てのタスクを保存
+            </a></li>
+          <li>
+            <a href="{{ route('goals.index', $goal) }}" class="px-4 py-2 ml-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">目標ページに戻る</a>
+          </li>
+          <li>
+            <a href="{{ route('tasks.index', $goal) }}" class="px-4 py-2 ml-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">タスク一覧に戻る</a>
+          </li>
+        </ul>
       </div>
     </div>
   </div>
@@ -297,6 +304,79 @@
     }
 
 
+    const saveAllTasksBtn = document.getElementById('saveAllTasksBtn');
+    saveAllTasksBtn.addEventListener('click', saveAllTasks);
+
+    function saveAllTasks() {
+      const events = calendar.getEvents();
+      const tasksToSave = events.map(event => {
+        const startDate = event.start.toISOString().split('T')[0];
+        const endDate = event.end ? event.end.toISOString().split('T')[0] : startDate;
+        const startTime = dateToHi(event.start);
+        const endTime = event.end ? dateToHi(event.end) : '10:00'; // デフォルトの終了時間を10:00に設定
+
+        return {
+          id: event.id,
+          name: event.title,
+          description: event.extendedProps?.description || '',
+          estimated_time: event.extendedProps?.estimatedTime || 1,
+          start_date: startDate,
+          start_time: startTime,
+          end_date: endDate,
+          end_time: endTime,
+          priority: event.extendedProps?.priority || '2',
+          goal_id: goalId
+        };
+      });
+
+      console.log('Saving all tasks:', tasksToSave);
+
+      const saveUrl = "{{ route('tasks.saveAll') }}";
+
+      fetch(saveUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+            'Accept': 'application/json',
+          },
+          body: JSON.stringify({
+            tasks: tasksToSave
+          }),
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            console.log('All tasks saved successfully', data);
+            // カレンダーイベントを更新
+            calendar.removeAllEvents();
+            data.tasks.forEach(task => {
+              calendar.addEvent({
+                id: task.id,
+                title: task.name,
+                start: `${task.start_date}T${task.start_time}`,
+                end: `${task.end_date}T${task.end_time}`,
+                extendedProps: {
+                  description: task.description,
+                  estimatedTime: task.estimated_time,
+                  priority: task.priority,
+                  end_time: task.end_time
+                }
+              });
+            });
+            alert('全てのタスクが正常に保存されました。');
+          } else {
+            console.error('Failed to save all tasks', data);
+            alert('タスクの保存中にエラーが発生しました。');
+          }
+        })
+        .catch(error => {
+          console.error('Error saving all tasks:', error);
+          alert('タスクの保存中にエラーが発生しました: ' + error);
+        });
+    }
+
+
     function updateCalendar(events) {
       console.log('Updating calendar with events:', events);
       calendar.removeAllEvents();
@@ -400,9 +480,9 @@
         description: event.extendedProps?.description || '',
         estimated_time: event.extendedProps?.estimatedTime || 1,
         start_date: event.start.toISOString().split('T')[0],
-        start_time: dateToHi(event.start), // H:i形式
-        end_date: event.end ? event.end.toISOString().split('T')[0] : null,
-        end_time: event.end ? dateToHi(event.end) : null, // H:i形式
+        start_time: dateToHi(event.start),
+        end_date: event.end ? event.end.toISOString().split('T')[0] : event.start.toISOString().split('T')[0],
+        end_time: event.end ? dateToHi(event.end) : '10:00', // デフォルトの終了時間を10:00に設定
         priority: event.extendedProps?.priority || '2',
         is_partial_update: isDropEvent
       };
@@ -426,22 +506,21 @@
         .then(data => {
           if (data.success) {
             console.log('Task updated successfully', data.task);
-            // 更新成功時の処理
             // カレンダーイベントを更新
-            event.extendedProps.isUpdated = true;
-            // event.remove();
-            // calendar.addEvent({
-            //   id: data.task.id,
-            //   title: data.task.name,
-            //   start_time: event.start ? formatTime(event.start) : null,
-            //   end_time: event.end ? formatTime(event.end) : null,
-            //   extendedProps: {
-            //     description: data.task.description,
-            //     estimatedTime: data.task.estimated_time,
-            //     priority: data.task.priority
-            //   }
-            // });
-            alert('タスクの更新が完了しました。'); // 成功時のアラート
+            event.remove();
+            calendar.addEvent({
+              id: data.task.id,
+              title: data.task.name,
+              start: `${data.task.start_date}T${data.task.start_time}`,
+              end: `${data.task.end_date}T${data.task.end_time}`,
+              extendedProps: {
+                description: data.task.description,
+                estimatedTime: data.task.estimated_time,
+                priority: data.task.priority,
+                end_time: data.task.end_time
+              }
+            });
+            alert('タスクの更新が完了しました。');
           } else {
             console.error('Failed to update task', data);
             alert('タスクの更新に失敗しました。');

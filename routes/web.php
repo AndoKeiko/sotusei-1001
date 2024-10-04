@@ -70,6 +70,7 @@ Route::middleware(['auth'])->group(function () {
   // Task routes
   Route::post('/update-task', [TaskController::class, 'updateTaskAjax'])->name('tasks.update.ajax');
   Route::post('/update-task-order', [TaskController::class, 'updateOrder'])->name('tasks.updateOrder');
+  Route::post('/tasks/save-all', [TaskController::class, 'saveAll'])->name('tasks.saveAll');
 
   // Line routes
   Route::get('/line/login', [LineController::class, 'redirectToLine'])->name('line.login');

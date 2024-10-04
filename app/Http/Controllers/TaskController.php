@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class TaskController extends Controller
 {
@@ -28,7 +29,7 @@ class TaskController extends Controller
   {
     $validatedData = $request->validate([
       'name' => 'required|string|max:255',
-      'estimated_time' => 'required|numeric|min:0',
+      'estimated_time' => 'required|numeric|min:0', // estimated_time は時間の小数形式（例: 1.5 = 1時間30分）
       'priority' => 'required|integer|min:1|max:3',
       'start_date' => 'nullable|date',
       'start_time' => 'nullable|date_format:H:i',
@@ -40,9 +41,21 @@ class TaskController extends Controller
       'priority' => $validatedData['priority'],
     ]);
 
-    // 日付と時間の割り当ては別途行う
+    // start_date と start_time の割り当て
     $task->start_date = $validatedData['start_date'] ? Carbon::parse($validatedData['start_date'])->format('Y-m-d') : null;
     $task->start_time = $validatedData['start_time'] ? Carbon::parse($validatedData['start_time'])->format('H:i') : null;
+
+    // end_time を計算する
+    if ($validatedData['start_time'] && $validatedData['estimated_time']) {
+      // Carbon で start_time に estimated_time を加算
+      $startTime = Carbon::parse($validatedData['start_time']);
+      $hours = floor($validatedData['estimated_time']); // 時間部分
+      $minutes = ($validatedData['estimated_time'] - $hours) * 60; // 分部分
+
+      // end_time を計算
+      $endTime = $startTime->copy()->addHours($hours)->addMinutes($minutes);
+      $task->end_time = $endTime->format('H:i');
+    }
 
     $task->user_id = Auth::id();
     $task->goal_id = $goal->id;
@@ -149,17 +162,36 @@ class TaskController extends Controller
     $validatedData = $request->validate([
       'name' => 'required|string|max:255',
       'description' => 'nullable|string',
-      'estimated_time' => 'nullable|numeric',
+      'estimated_time' => 'nullable|numeric|min:0',
       'start_date' => 'nullable|date',
       'start_time' => 'nullable|date_format:H:i',
       'priority' => 'required|integer|min:1|max:3',
     ]);
 
-    if (isset($validatedData['start_time'])) {
-      $validatedData['start_time'] = Carbon::parse($validatedData['start_time'])->format('H:i');
+    if (isset($validatedData['start_date']) && isset($validatedData['start_time']) && isset($validatedData['estimated_time'])) {
+      $startDateTime = Carbon::parse($validatedData['start_date'] . ' ' . $validatedData['start_time']);
+      $estimatedTime = $validatedData['estimated_time'] ?? 1;
+      $hours = floor($validatedData['estimated_time']);
+      $minutes = ($validatedData['estimated_time'] - $hours) * 60;
+
+      // end_time と end_date を計算
+      $endDateTime = $startDateTime->copy()->addHours($hours)->addMinutes($minutes);
+      $validatedData['end_time'] = $endDateTime->format('H:i');
+      $validatedData['end_date'] = $endDateTime->toDateString();
+    } else {
+      // 必要な情報が不足している場合は end_time と end_date をnullに設定
+      $validatedData['end_time'] = '10:00';  // デフォルトの終了時間を10:00に設定
+      $validatedData['end_date'] = $validatedData['start_date'] ?? now()->toDateString();
     }
 
+    // タスクを更新する
     $task->update($validatedData);
+
+    // 更新後のタスクを再取得して確実に最新の状態を取得
+    $task = $task->fresh();
+
+    Log::info('Task updated successfully', ['task_id' => $task->id, 'updated_data' => $validatedData]);
+    Log::info('Updated task', ['task' => $task->toArray()]);
 
     return response()->json([
       'success' => true,
@@ -167,32 +199,52 @@ class TaskController extends Controller
     ]);
   }
 
+  public function saveAll(Request $request)
+  {
+      $tasks = $request->input('tasks');
+      
+      DB::beginTransaction();
+      try {
+          $updatedTasks = [];
+          foreach ($tasks as $taskData) {
+              $task = Task::findOrFail($taskData['id']);
+              $task->update($taskData);
+              $updatedTasks[] = $task->fresh();
+          }
+          DB::commit();
+          return response()->json(['success' => true, 'message' => 'All tasks saved successfully', 'tasks' => $updatedTasks]);
+      } catch (\Exception $e) {
+          DB::rollBack();
+          Log::error('Error saving tasks: ' . $e->getMessage());
+          return response()->json(['success' => false, 'message' => 'Error saving tasks: ' . $e->getMessage()], 500);
+      }
+  }
+
   public function getCalendarEvents($goalId)
   {
-      // タスクを取得して配列に変換
-      $tasks = Task::where('goal_id', $goalId)->get();
-      
-      $calendarEvents = $tasks->map(function ($task) {
-          return [
-              'id' => $task->id,
-              'title' => $task->name,
-              'start' => $task->start_date . 'T' . $task->start_time,
-              'end' => $task->end_date ? $task->end_date . 'T' . $task->end_time : null,
-              'extendedProps' => [
-                  'description' => $task->description,
-                  'estimatedTime' => $task->estimated_time,
-                  'priority' => $task->priority,
-              ],
-          ];
-      })->toArray(); // Collection を配列に変換
-  
-      // ログ出力
-      Log::info('Number of tasks found:', ['count' => $tasks->count()]);
-      Log::info('Goal ID:', ['goalId' => $goalId]);
-      Log::alert('Calendar events retrieved successfully', ['calendarEvents' => $calendarEvents]);
-  
-      // JSON形式でカレンダーイベントを返す
-      return response()->json(['calendarEvents' => $calendarEvents]);
+    // タスクを取得して配列に変換
+    $tasks = Task::where('goal_id', $goalId)->get();
+
+    $calendarEvents = $tasks->map(function ($task) {
+      return [
+        'id' => $task->id,
+        'title' => $task->name,
+        'start' => $task->start_date . 'T' . $task->start_time,
+        'end' => $task->end_date ? $task->end_date . 'T' . $task->end_time : null,
+        'extendedProps' => [
+          'description' => $task->description,
+          'estimatedTime' => $task->estimated_time,
+          'priority' => $task->priority,
+        ],
+      ];
+    })->toArray(); // Collection を配列に変換
+
+    // ログ出力
+    Log::info('Number of tasks found:', ['count' => $tasks->count()]);
+    Log::info('Goal ID:', ['goalId' => $goalId]);
+    Log::alert('Calendar events retrieved successfully', ['calendarEvents' => $calendarEvents]);
+
+    // JSON形式でカレンダーイベントを返す
+    return response()->json(['calendarEvents' => $calendarEvents]);
   }
-  
 }
