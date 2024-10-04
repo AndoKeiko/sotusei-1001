@@ -20,11 +20,14 @@ class SendTaskNotifications extends Command
     public function handle()
     {
         $minutes = $this->argument('minutes');
-        $tasks = Task::whereNotNull('start_time')  // start_timeがnullでないもの
+        $tasks = Task::whereNotNull('start_time')//nullじゃないものだけ
             ->where('start_time', '>', Carbon::now())
             ->where('start_time', '<=', Carbon::now()->addMinutes($minutes))
             ->where('notified', false)
             ->get();
+
+            $notifiedCount = 0;
+            $failedCount = 0;
 
         // タスクが存在しない場合
         if ($tasks->isEmpty()) {
@@ -39,21 +42,32 @@ class SendTaskNotifications extends Command
             if ($user && $user->hasVerifiedEmail()) {
                 Log::info("Sending notification for task ID: {$task->id}");
                 try {
-                    // メール送信
                     Mail::to($user->email)->send(new ReminderMail($task));
-                    // 通知送信
                     Notification::send($user, new TaskReminder($task));
                     
                     // 通知済みフラグを更新
                     $task->notified = true;
                     $task->save();
-                    Log::info("Task ID: {$task->id} has been notified.");
+                    $notifiedCount++;
+
+                    $message = "Task ID: {$task->id} has been notified.";
+                    $this->info($message);
+                    Log::info($message);
                 } catch (\Exception $e) {
-                    Log::error("Failed to send notification for task ID: {$task->id}, Error: " . $e->getMessage());
+                    $failedCount++;
+                    $errorMessage = "Failed to send notification for task ID: {$task->id}, Error: " . $e->getMessage();
+                    $this->error($errorMessage);
+                    Log::error($errorMessage);
                 }
             }
         }
 
-        $this->info('Task notifications sent successfully.');
+        $this->info("Task notifications process completed.");
+        $this->info("Total tasks processed: " . $tasks->count());
+        $this->info("Notifications sent successfully: " . $notifiedCount);
+        $this->info("Failed notifications: " . $failedCount);
+
+        Log::info("Task notifications process completed. Total: {$tasks->count()}, Sent: {$notifiedCount}, Failed: {$failedCount}");
     }
 }
+

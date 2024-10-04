@@ -28,27 +28,8 @@ class Kernel extends ConsoleKernel
 
   protected function schedule(Schedule $schedule): void
   {
-    // 特定のタスク(ID 1)に毎分リマインダーメールを送信
-    // $schedule->call(function () {
-    //     Log::info('Checking task ID: 1 every minute');
-
-    //     // タスクを取得 (ID 1 を例にしています)
-    //     $task = Task::find(1); // 実際には条件を指定してタスクを取得するかもしれません
-
-    //     // もしタスクが存在すればメールを送信
-    //     if ($task) {
-    //         Notification::route('mail', 'gajumaro.no.ki@gmail.com')
-    //             ->notify(new TaskReminder($task));
-    //         Log::info('ReminderMail sent for task: ' . $task->name);
-    //     } else {
-    //         Log::warning('No task found for reminder mail.');
-    //     }
-    // })->everyMinute();
-
     // 認証済みユーザーに対して、開始予定時間10分前のタスク通知を送信
-    $schedule->call(function () {
-      $this->notifyUsersBeforeTask();
-    })->everyMinute();
+      $schedule->command('app:send-task-notifications 10')->everyMinute();
   }
 
   protected function notifyUsersBeforeTask()
