@@ -75,6 +75,11 @@ Route::middleware(['auth'])->group(function () {
   Route::get('/line/login', [LineController::class, 'redirectToLine'])->name('line.login');
   Route::get('/line/callback', [LineController::class, 'handleLineCallback'])->name('line.callback');
   Route::post('/line/webhook', [LineWebhookController::class, 'handleWebhook']);
+
+  // テストするためのエンドポイント
+// ルート定義 (2つのパラメータをURLで受け取る)
+Route::get('/test-line-notification/{userId}/{message}', [LineController::class, 'scheduleNotification']);
+
 });
 
 require __DIR__ . '/auth.php';

@@ -95,11 +95,12 @@ class LineController extends Controller
   }
 
   // LINE通知のスケジュール
-  public function scheduleNotification($userId, $message)
+  public function scheduleNotification($userId, $message = 'デフォルトのメッセージ')
   {
-    SendLineNotificationJob::dispatch($userId, $message);
-    return response()->json(['success' => true, 'message' => 'Notification queued for sending']);
+      SendLineNotificationJob::dispatch($userId, $message);
+      return response()->json(['success' => true, 'message' => 'Notification queued for sending']);
   }
+  
 
   // LINE通知のトグル（オン・オフ切り替え）
   public function toggleNotifications(Request $request)

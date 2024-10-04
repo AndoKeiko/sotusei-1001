@@ -17,26 +17,26 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // 特定のタスク(ID 1)に毎分リマインダーメールを送信
-        $schedule->call(function () {
-            Log::info('Checking task ID: 1 every minute');
+        // $schedule->call(function () {
+        //     Log::info('Checking task ID: 1 every minute');
 
-            // タスクを取得 (ID 1 を例にしています)
-            $task = Task::find(1); // 実際には条件を指定してタスクを取得するかもしれません
+        //     // タスクを取得 (ID 1 を例にしています)
+        //     $task = Task::find(1); // 実際には条件を指定してタスクを取得するかもしれません
 
-            // もしタスクが存在すればメールを送信
-            if ($task) {
-                Notification::route('mail', 'gajumaro.no.ki@gmail.com')
-                    ->notify(new TaskReminder($task));
-                Log::info('ReminderMail sent for task: ' . $task->name);
-            } else {
-                Log::warning('No task found for reminder mail.');
-            }
-        })->everyMinute();
+        //     // もしタスクが存在すればメールを送信
+        //     if ($task) {
+        //         Notification::route('mail', 'gajumaro.no.ki@gmail.com')
+        //             ->notify(new TaskReminder($task));
+        //         Log::info('ReminderMail sent for task: ' . $task->name);
+        //     } else {
+        //         Log::warning('No task found for reminder mail.');
+        //     }
+        // })->everyMinute();
 
         // 認証済みユーザーに対して、開始予定時間10分前のタスク通知を送信
-        // $schedule->call(function () {
-        //     $this->notifyUsersBeforeTask();
-        // })->everyMinute();
+        $schedule->call(function () {
+            $this->notifyUsersBeforeTask();
+        })->everyMinute();
     }
 
     protected function notifyUsersBeforeTask()
@@ -55,6 +55,10 @@ class Kernel extends ConsoleKernel
                 ->whereNotNull('start_time')  // start_time が null でないことを確認
                 ->where('start_time', '>=', $currentTime) // 現在時刻以降
                 ->where('start_time', '<=', $notificationTime) // 10分以内に開始
+                ->where(function ($query) {
+                    $query->whereNull('last_notification_sent')  // 通知が送られていない場合
+                          ->orWhere('last_notification_sent', '<', Carbon::now()->subMinutes(10));  // 前回の通知から10分以上経過している場合
+                })
                 ->get();
     
             // タスクが存在する場合、通知を送信
@@ -62,6 +66,11 @@ class Kernel extends ConsoleKernel
                 try {
                     // メールまたはLINEで通知を送信
                     $this->sendNotification($user, $task);
+    
+                    // 通知が正常に送信されたら、last_notification_sent カラムを更新
+                    $task->last_notification_sent = Carbon::now();
+                    $task->save();
+    
                     Log::info("Task notification sent successfully to: {$user->email} for task: {$task->name}");
                 } catch (\Exception $e) {
                     // エラー処理
@@ -71,7 +80,24 @@ class Kernel extends ConsoleKernel
         }
     }
     
-
+    
+    protected function sendNotification(User $user, Task $task)
+    {
+        if ($task->start_time) { // start_timeが設定されているか確認
+            if ($user->isLineAuthenticated()) {
+                // LINE認証済みの場合はLINE通知を送信
+                SendLineNotificationJob::dispatch($user->id, $task->name . ' のタスクが開始されます');
+            } elseif ($user->isEmailAuthenticated()) {
+                // メール認証済みの場合はメール通知を送信
+                $user->notify(new TaskReminder($task));
+            } else {
+                Log::warning("User {$user->id} has no valid authentication for notification.");
+            }
+        } else {
+            Log::warning("Task {$task->id} has no start_time. No notification sent.");
+        }
+    }
+    
     protected function commands(): void
     {
         $this->load(__DIR__ . '/Commands');
