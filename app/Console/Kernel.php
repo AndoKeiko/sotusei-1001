@@ -34,9 +34,9 @@ class Kernel extends ConsoleKernel
         })->everyMinute();
 
         // 認証済みユーザーに対して、開始予定時間10分前のタスク通知を送信
-        $schedule->call(function () {
-            $this->notifyUsersBeforeTask();
-        })->everyMinute();
+        // $schedule->call(function () {
+        //     $this->notifyUsersBeforeTask();
+        // })->everyMinute();
     }
 
     protected function notifyUsersBeforeTask()

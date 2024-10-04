@@ -11,74 +11,58 @@ use Illuminate\Support\Facades\Http;
 
 class TaskReminder extends Notification
 {
-  use Queueable;
+    use Queueable;
 
-  protected $task;
+    protected $task;
 
-  public function __construct(Task $task)  // Task モデルを受け取るように変更
-  {
-    $this->task = $task;
-  }
+    public function __construct(Task $task)  // Task モデルを受け取るように変更
+    {
+        $this->task = $task;
+    }
 
-  public function via(object $notifiable): array
-  {
-    return ['mail', 'line'];
-  }
+    public function via(object $notifiable): array
+    {
+        return ['mail', 'line'];
+    }
 
-  public function toMail($notifiable)
-  {
-    return (new MailMessage)
-      ->line('Task Reminder')
-      ->line('Your task "' . $this->task->name . '" is scheduled to start soon.')
-      ->line('Start time: ' . $this->task->start_time)
-      ->action('View Task', url('/tasks/' . $this->task->id))
-      ->line('Thank you for using our application!');
-  }
-  /**
-   * Get the array representation of the notification.
-   *
-   * @return array<string, mixed>
-   */
-  public function toArray(object $notifiable): array
-  {
-    return [
-      //
-    ];
-  }
+    public function toMail($notifiable)
+    {
+        return (new MailMessage)
+            ->line('Task Reminder')
+            ->line('Your task "' . $this->task->name . '" is scheduled to start soon.')
+            ->line('Start time: ' . $this->task->start_time)
+            ->action('View Task', url('/tasks/' . $this->task->id))
+            ->line('Thank you for using our application!');
+    }
 
-  // LINE通知用のメソッドを追加
-  public function toLine($notifiable)
-  {
-    // LINE Messaging APIのエンドポイント
-    $lineApiUrl = 'https://api.line.me/v2/bot/message/push';
+    public function toLine($notifiable)
+    {
+        $lineApiUrl = 'https://api.line.me/v2/bot/message/push';
 
-    // LINEユーザーのトークンを取得（notifiableはLINEユーザー）
-    $lineAccessToken = $notifiable->line_access_token;
+        $lineAccessToken = $notifiable->line_access_token;
 
-    // LINEに送るメッセージの構成
-    $messageData = [
-      'to' => $lineAccessToken,
-      'messages' => [
-        [
-          'type' => 'text',
-          'text' => "Task Reminder: Your task \"" . $this->task->name . "\" is starting soon.\nStart time: " . $this->task->start_time
-        ]
-      ]
-    ];
+        $messageData = [
+            'to' => $lineAccessToken,
+            'messages' => [
+                [
+                    'type' => 'text',
+                    'text' => "Task Reminder: Your task \"" . $this->task->name . "\" is starting soon.\nStart time: " . $this->task->start_time
+                ]
+            ]
+        ];
 
-    // HTTPリクエストでLINEにメッセージを送信
-    Http::withHeaders([
-      'Authorization' => 'Bearer ' . config('services.line.channel_token'),
-      'Content-Type' => 'application/json',
-    ])->post($lineApiUrl, $messageData);
-  }
+        Http::withHeaders([
+            'Authorization' => 'Bearer ' . config('services.line.channel_token'),
+            'Content-Type' => 'application/json',
+        ])->post($lineApiUrl, $messageData);
+    }
 
-  public function toArray(object $notifiable): array
-  {
-    return [
-      'task_id' => $this->task->id,
-      'task_name' => $this->task->name,
-      'start_time' => $this->task->start_time,
-    ];
-  }
+    public function toArray(object $notifiable): array
+    {
+        return [
+            'task_id' => $this->task->id,
+            'task_name' => $this->task->name,
+            'start_time' => $this->task->start_time,
+        ];
+    }
 }
