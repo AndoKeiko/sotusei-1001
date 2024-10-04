@@ -1,89 +1,92 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mx-auto px-4 sm:px-8">
-  <div class="py-8">
-    <div class="flex justify-between items-center">
-      <h2 class="text-2xl font-semibold leading-tight">{{ $goal->name }}タスク一覧</h2>
-    </div>
-    <div class="my-2 flex sm:flex-row flex-col">
-      <div class="block relative">
-        <span class="h-full absolute inset-y-0 left-0 flex items-center pl-2">
-          <svg viewBox="0 0 24 24" class="h-4 w-4 fill-current text-gray-500">
-            <path d="M10 4a6 6 0 100 12 6 6 0 000-12zm-8 6a8 8 0 1114.32 4.906l5.387 5.387a1 1 0 01-1.414 1.414l-5.387-5.387A8 8 0 012 10z"></path>
-          </svg>
-        </span>
-        <input placeholder="タスクを検索"
-          class="appearance-none rounded-r rounded-l sm:rounded-l-none border border-gray-400 border-b block pl-8 pr-6 py-2 w-full bg-white text-sm placeholder-gray-400 text-gray-700 focus:bg-white focus:placeholder-gray-600 focus:text-gray-700 focus:outline-none" />
+<div class="py-12">
+  <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+      <div class="p-6 bg-white border-b border-gray-200">
+        <h2 class="text-2xl font-semibold mb-6">{{ $goal->name }}タスク一覧</h2>
+      </div>
+      <div class="my-2 flex sm:flex-row flex-col p-4">
+        <div class="relative">
+          <span class="absolute inset-y-0 left-0 flex items-center pl-2">
+            <svg viewBox="0 0 24 24" class="h-4 w-4 fill-current text-gray-500">
+              <path d="M10 4a6 6 0 100 12 6 6 0 000-12zm-8 6a8 8 0 1114.32 4.906l5.387 5.387a1 1 0 01-1.414 1.414l-5.387-5.387A8 8 0 012 10z"></path>
+            </svg>
+          </span>
+          <input placeholder="タスクを検索"
+            class="appearance-none rounded-md border border-gray-300 pl-8 pr-6 py-2 w-full bg-white text-sm placeholder-gray-400 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+        </div>
+      </div>
+      <div class="px-4 sm:px-8 py-4 overflow-x-auto">
+        <div class="inline-block min-w-full shadow rounded-lg overflow-hidden">
+          <table class="min-w-full leading-normal" id="taskTable">
+            <thead>
+              <tr>
+                <th scope="col" class="px-5 py-3 bg-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">順序</th>
+                <th class="px-5 py-3 bg-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  タスク名
+                </th>
+                <th class="px-5 py-3 bg-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  予想時間
+                </th>
+                <th class="px-5 py-3 bg-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  優先度
+                </th>
+                <th class="px-5 py-3 bg-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  アクション
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              @foreach ($tasks as $index => $task)
+              <tr class="task-item" data-task-id="{{ $task->id }}">
+                <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <span class="task-order">{{ $index + 1 }}</span>
+                </td>
+                <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <span class="task-name-display">{{ $task->name }}</span>
+                  <input type="text" class="task-name-input hidden border rounded-md px-2 py-1 w-full" value="{{ $task->name }}">
+                </td>
+                <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <span class="task-time-display">{{ $task->estimated_time }}</span>
+                  <input type="number" class="task-time-input task-estimated_time-input hidden border rounded-md px-2 py-1 w-full" value="{{ $task->estimated_time }}">
+                  <span class="ml-1">時間</span>
+                </td>
+                <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <span class="task-priority-display">
+                    @if($task->priority == 1)
+                    低
+                    @elseif($task->priority == 2)
+                    中
+                    @else
+                    高
+                    @endif
+                  </span>
+                  <select class="task-priority-select hidden border rounded-md px-2 py-1 w-full">
+                    <option value="1" {{ $task->priority == 1 ? 'selected' : '' }}>低</option>
+                    <option value="2" {{ $task->priority == 2 ? 'selected' : '' }}>中</option>
+                    <option value="3" {{ $task->priority == 3 ? 'selected' : '' }}>高</option>
+                  </select>
+                </td>
+                <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
+                  <button class="edit-task bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded-md mr-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">編集</button>
+                  <button class="update-task bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded-md mr-2 hidden focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">更新</button>
+                  <button class="delete-task bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50">削除</button>
+                </td>
+              </tr>
+              @endforeach
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
-    <div class="-mx-4 sm:-mx-8 px-4 sm:px-8 py-4 overflow-x-auto">
-      <div class="inline-block min-w-full shadow rounded-lg overflow-hidden">
-        <table class="min-w-full leading-normal" id="taskTable">
-          <thead>
-            <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">順序</th>
-              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                タスク名
-              </th>
-              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
-                予想時間
-              </th>
-              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
-                優先度
-              </th>
-              <th class="px-5 py-3 border-b-2 border-gray-200 bg-gray-100 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider text-center">
-                アクション
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            @foreach ($tasks as $index => $task)
-            <tr class="task-item" data-task-id="{{ $task->id }}">
-              <td class="px-6 py-4 whitespace-nowrap">
-                <span class="task-order">{{ $index + 1 }}</span>
-              </td>
-              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm">
-                <span class="task-name-display">{{ $task->name }}</span>
-                <input type="text" class="task-name-input hidden border rounded px-2 py-1 w-full" value="{{ $task->name }}">
-              </td>
-              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm  text-center">
-                <span class="task-time-display">{{ $task->estimated_time }}</span>
-                <input type="number" class="task-time-input hidden border rounded px-2 py-1 w-full" value="{{ $task->estimated_time }}"> 時間
-              </td>
-              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm  text-center">
-                <span class="task-priority-display">
-                  @if($task->priority == 1)
-                  低
-                  @elseif($task->priority == 2)
-                  中
-                  @else
-                  高
-                  @endif
-                </span>
-                <select class="task-priority-select hidden border rounded px-2 py-1 w-full">
-                  <option value="1" {{ $task->priority == 1 ? 'selected' : '' }}>低</option>
-                  <option value="2" {{ $task->priority == 2 ? 'selected' : '' }}>中</option>
-                  <option value="3" {{ $task->priority == 3 ? 'selected' : '' }}>高</option>
-                </select>
-              </td>
-              <td class="px-5 py-5 border-b border-gray-200 bg-white text-sm text-center">
-                <button class="edit-task bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-2 rounded mr-2">編集</button>
-                <button class="update-task bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-2 rounded mr-2 hidden">更新</button>
-                <button class="delete-task bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded">削除</button>
-              </td>
-            </tr>
-            @endforeach
-          </tbody>
-        </table>
-      </div>
+    <div class="mt-8">
+      <a href="{{ route('schedules.index', $goal) }}" class="text-blue-600 hover:text-blue-800">カレンダーに書き出す</a>
     </div>
-  </div>
-  <div class="mt-8">
-    <a href="{{ route('schedules.index', $goal) }}" class="text-blue-600 hover:text-blue-800">カレンダーに書き出す</a>
-  </div>
-  <div class="mt-8">
-    <a href="{{ route('goals.index', $goal) }}" class="text-blue-600 hover:text-blue-800">目標ページに戻る</a>
+    <div class="mt-8">
+      <a href="{{ route('goals.index') }}" class="text-blue-600 hover:text-blue-800">目標ページに戻る</a>
+    </div>
   </div>
 </div>
 @push('scripts')
@@ -119,12 +122,12 @@
         const row = e.target.closest('tr');
         const taskId = row.dataset.taskId;
         const name = row.querySelector('.task-name-input').value;
-        const time = row.querySelector('.task-time-input').value;
+        const time = row.querySelector('.task-estimated_time-input').value;
         const priority = row.querySelector('.task-priority-select').value;
-        const start_time = row.querySelector('.task-time-input').value; 
-        const start_date = row.querySelector('.task-time-input').value; 
+        const start_date = "2024-10-04";  // タスクの日付の初期値
+        const start_time = "09:00";  // タスクの時間の初期値
 
-        fetch(`https://gajumaro.jp/yumekanau/update-task`, {
+        fetch(`/update-task`, {//serverではフルパスで通ったところ
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

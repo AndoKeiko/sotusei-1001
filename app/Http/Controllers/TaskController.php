@@ -51,42 +51,53 @@ class TaskController extends Controller
     return response()->json(['success' => true, 'task' => $task]);
   }
 
+
   public function updateTaskAjax(Request $request, Task $task)
   {
     Log::info('Updating task', ['task_id' => $task->id, 'request_data' => $request->all()]);
     try {
       $validatedData = $request->validate([
-        'name' => 'required|string|max:255',
-        'estimated_time' => 'required|numeric|min:0',
-        'priority' => 'required|integer|min:1|max:3',
-        'start_date' => 'required|date',
-        'start_time' => 'nullable|date_format:H:i',
+        'id' => 'required|exists:tasks,id',
+        'name' => 'nullable|string',
+        'estimated_time' => 'nullable|numeric',
+        'priority' => 'nullable|integer',
+        'start_date' => 'nullable|string',
+        'start_time' => 'nullable|string',
       ]);
 
-      $task->update($validatedData);
+      // 有効な日付かどうかをチェックし、無効ならデフォルト値を設定
+      $startDate = $validatedData['start_date'] ? new \DateTime($validatedData['start_date']) : new \DateTime();
+      $startTime = $validatedData['start_time'] ? new \DateTime($validatedData['start_time']) : new \DateTime('09:00');
 
-      // このゴールに関連するすべてのタスクを取得
+      $task->update([
+        'name' => $validatedData['name'],
+        'estimated_time' => $validatedData['estimated_time'],
+        'priority' => $validatedData['priority'],
+        'start_date' => $startDate->format('Y-m-d'),
+        'start_time' => $startTime->format('H:i'),
+      ]);
+
+      // スケジュールの再計算（変更なし）
       $allTasks = Task::where('goal_id', $task->goal_id)
         ->orderBy('start_date')
         ->orderBy('start_time')
         ->get();
 
-      // スケジュールの再計算
-      $currentDateTime = Carbon::parse($validatedData['start_date'] . ' ' . $validatedData['start_time'] ?? '09:00');
+      $currentDateTime = new \DateTime($startDate->format('Y-m-d') . ' ' . $startTime->format('H:i'));
       foreach ($allTasks as $t) {
         if ($t->id === $task->id) {
           continue; // 今更新したタスクはスキップ
         }
-        $t->start_date = $currentDateTime->toDateString();
+        $t->start_date = $currentDateTime->format('Y-m-d');
         $t->start_time = $currentDateTime->format('H:i');
         $t->save();
 
         // 次の時間枠に移動
-        $currentDateTime->addHours($t->estimated_time);
+        $currentDateTime->modify("+{$t->estimated_time} hours");
 
         // 午後5時以降の場合は翌日の午前9時に設定
-        if ($currentDateTime->hour >= 17) {
-          $currentDateTime->addDay()->setTime(9, 0, 0);
+        if ($currentDateTime->format('H') >= 17) {
+          $currentDateTime->modify('+1 day')->setTime(9, 0);
         }
       }
 
@@ -96,6 +107,9 @@ class TaskController extends Controller
       return response()->json(['success' => false, 'message' => 'Error updating task'], 500);
     }
   }
+
+
+
 
   public function updateOrder(Request $request)
   {
@@ -152,4 +166,33 @@ class TaskController extends Controller
       'task' => $task
     ]);
   }
+
+  public function getCalendarEvents($goalId)
+  {
+      // タスクを取得して配列に変換
+      $tasks = Task::where('goal_id', $goalId)->get();
+      
+      $calendarEvents = $tasks->map(function ($task) {
+          return [
+              'id' => $task->id,
+              'title' => $task->name,
+              'start' => $task->start_date . 'T' . $task->start_time,
+              'end' => $task->end_date ? $task->end_date . 'T' . $task->end_time : null,
+              'extendedProps' => [
+                  'description' => $task->description,
+                  'estimatedTime' => $task->estimated_time,
+                  'priority' => $task->priority,
+              ],
+          ];
+      })->toArray(); // Collection を配列に変換
+  
+      // ログ出力
+      Log::info('Number of tasks found:', ['count' => $tasks->count()]);
+      Log::info('Goal ID:', ['goalId' => $goalId]);
+      Log::alert('Calendar events retrieved successfully', ['calendarEvents' => $calendarEvents]);
+  
+      // JSON形式でカレンダーイベントを返す
+      return response()->json(['calendarEvents' => $calendarEvents]);
+  }
+  
 }

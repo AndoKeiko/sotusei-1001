@@ -240,4 +240,5 @@ class ScheduleController extends Controller
       return response()->json(['success' => false, 'message' => 'An error occurred while saving events'], 500);
     }
   }
+
 }

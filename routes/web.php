@@ -7,6 +7,8 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LineController;
 use App\Http\Controllers\LineWebhookController;
 use App\Http\Controllers\ScheduleController;
+use App\Http\Controllers\CalendarController;
+use App\Http\Controllers\LineLoginController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -60,6 +62,9 @@ Route::middleware(['auth'])->group(function () {
   Route::get('goals/{goal}/schedules', [ScheduleController::class, 'index'])->name('schedules.index');
   Route::post('/goals/{goal}/schedule/generate', [ScheduleController::class, 'generate'])->name('goals.schedule.generate');
   Route::post('/tasks/save-events', [ScheduleController::class, 'saveEvents'])->name('tasks.saveEvents');
+  Route::get('/calendar-events/{userId}', [TaskController::class, 'getCalendarEvents']);
+
+  Route::get('/get-calendar-events/{goalId}', [TaskController::class, 'getCalendarEvents']);
 
 
   // Task routes

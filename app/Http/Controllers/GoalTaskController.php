@@ -24,7 +24,7 @@ class GoalTaskController extends Controller
     {
         $validatedData = $request->validate([
             'name' => 'required|string|max:255',
-            'estimated_time' => 'required|numeric|min:0',
+            'estimated_time' => 'required|numeric|min:1',
             'priority' => 'required|integer|min:1|max:3',
         ]);
 

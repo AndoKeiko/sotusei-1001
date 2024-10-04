@@ -40,15 +40,15 @@ class Task extends Model
     'user_id' => 'integer',
     'goal_id' => 'integer',
     'elapsed_time' => 'integer',
-    'estimated_time' => 'float',
-    'start_date' => 'date:Y-m-d',
-    'start_time' => 'string',  // H:i形式の文字列として扱う
+    'estimated_time' => 'float',  // floatはこのままでもよい
+    'start_date' => 'string',     // stringとしてキャストし、フォーマットは手動で管理
+    'start_time' => 'string',     // stringとして扱い、柔軟に処理
     'priority' => 'integer',
     'order' => 'integer',
     'review_interval' => 'string',
     'repetition_count' => 'integer',
-    'last_notification_sent' => 'datetime',
-    'end_date' => 'date',
+    'last_notification_sent' => 'datetime',  // これは適切にキャスト
+    'end_date' => 'string',      // stringとして扱い、フォーマットは手動で管理
   ];
 
   // ルートキー名の設定
@@ -68,13 +68,11 @@ class Task extends Model
   ];
 
   // アクセサとミューテータ
-  // 開始日時を取得
+  // 開始日時の取得
   public function getStartAttribute()
   {
     if ($this->start_date && $this->start_time) {
-      return Carbon::parse($this->start_date . ' ' . $this->start_time)->format('Y-m-d\TH:i');
-    } elseif ($this->start_date) {
-      return $this->start_date->format('Y-m-d\TH:i');
+      return $this->start_date . 'T' . $this->start_time; // Carbonを使わずにそのまま返す
     }
     return null;
   }
@@ -86,8 +84,8 @@ class Task extends Model
       return null;
     }
     try {
-      // 常にH:i形式で返す
-      return Carbon::parse($value)->format('H:i');
+      // 任意の形式で返す（H:iに厳密にしない）
+      return $value;
     } catch (\Exception $e) {
       Log::warning("Invalid start_time format for task {$this->id}: {$value}");
       return null;
@@ -97,14 +95,15 @@ class Task extends Model
   // 開始時間の設定
   public function setStartTimeAttribute($value)
   {
-    try {
-      // 常にH:i形式で保存
-      $this->attributes['start_time'] = Carbon::parse($value)->format('H:i');
-    } catch (\Exception $e) {
-      Log::warning("Invalid time format provided for start_time: {$value}");
-      $this->attributes['start_time'] = null;
-    }
+      try {
+          // フォーマットが不正でもそのまま保存
+          $this->attributes['start_time'] = $value;
+      } catch (\Exception $e) {
+          Log::warning("Invalid time format provided for start_time: {$value}");
+          $this->attributes['start_time'] = null;
+      }
   }
+  
 
   // 終了日時の取得
   public function getEndAttribute()

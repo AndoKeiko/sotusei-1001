@@ -23,7 +23,7 @@ class ScheduleGeneratorService
 
     $currentDate = $workPeriodStart;
     $currentTaskIndex = 0;
-    $remainingTaskTime = $tasks->isNotEmpty() ? $tasks[$currentTaskIndex]->estimated_time : 0;
+    $remainingTaskTime = $tasks->isNotEmpty() ? $tasks[$currentTaskIndex]->estimated_time : 1;
     // 3. スケジュール生成のメインループ
     while ($currentDate <= $endDate && $currentTaskIndex < $tasks->count()) {
       $dailyWorkTime = $hoursPerDay;

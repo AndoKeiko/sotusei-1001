@@ -3,6 +3,7 @@
   let initialSchedule = @json($initialSchedule);
   let initialCalendarEvents = @json($calendarEvents);
   let updateTaskUrl = "{{ route('tasks.update', ':taskId') }}";
+  console.log('initialCalendarEvents:', initialCalendarEvents);
 </script>
 @section('content')
 <div class="py-12">
@@ -43,8 +44,6 @@
     </div>
   </div>
 </div>
-
-
 <!-- タスク編集モーダル -->
 <div id="taskEditModal" class="fixed z-10 inset-0 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
   <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
@@ -98,6 +97,8 @@
     </div>
   </div>
 </div>
+
+
 @endsection
 
 @push('styles')
@@ -138,6 +139,7 @@
       eventDrop: function(info) {
         if (info.event) {
           updateTask(info.event, true);
+          reloadCalendarEvents(); // イベントの再取得
         } else {
           console.error('Error: Dropped event is undefined');
           alert('イベントの移動中にエラーが発生しました: イベントが見つかりません。');
@@ -146,6 +148,7 @@
       eventResize: function(info) {
         if (info.event) {
           updateTask(info.event, true);
+          reloadCalendarEvents(); // イベントの再取得
         } else {
           console.error('Error: Resized event is undefined');
           alert('イベントのリサイズ中にエラーが発生しました: イベントが見つかりません。');
@@ -160,6 +163,7 @@
     });
 
     calendar.render();
+
 
     if (typeof initialSchedule !== 'undefined') {
       displaySchedule(initialSchedule);
@@ -237,12 +241,12 @@
       let calendarEvents = [];
       for (const date in schedule) {
         scheduleHtml += `
-          <li class="mb-2 text-sm">
-            <div class="font-semibold py-0 px-1 bg-gray-200 hover:bg-gray-300 rounded cursor-pointer">
-              ${date}
-            </div>
-            <ul id="schedule-${date}" class="list-disc pl-8 mt-2">
-        `;
+        <li class="mb-2 text-sm">
+          <div class="font-semibold py-0 px-1 bg-gray-200 hover:bg-gray-300 rounded cursor-pointer">
+            ${date}
+          </div>
+          <ul id="schedule-${date}" class="list-disc pl-8 mt-2">
+      `;
         for (const task of schedule[date]) {
           const roundedDuration = Math.round(task.duration * 10) / 10;
           scheduleHtml += `<li class="text-xs">${task.name} (${roundedDuration}時間, ${task.start_time} - ${task.end_time})</li>`;
@@ -251,18 +255,17 @@
           const startDateTime = new Date(`${date}T${task.start_time}`);
           const endDateTime = new Date(`${date}T${task.end_time}`);
           calendarEvents.push({
-            id: task.id, // タスクIDを追加
+            id: task.id,
             title: task.name,
-            start: startDateTime.toISOString(),
-            end: endDateTime.toISOString(),
+            start: startDateTime,
+            end: endDateTime,
             extendedProps: {
               duration: roundedDuration,
               description: task.description || '',
-              estimatedTime: task.estimated_time || 0,
+              estimatedTime: task.estimated_time || 1,
               priority: task.priority || '2',
             }
           });
-
         }
         scheduleHtml += '</ul></li>';
       }
@@ -288,12 +291,13 @@
       document.getElementById('editTaskId').value = taskId;
       document.getElementById('editTaskName').value = event.title;
       document.getElementById('editTaskDescription').value = event.extendedProps.description || '';
-      document.getElementById('editTaskEstimatedTime').value = event.extendedProps.estimatedTime || '';
+      document.getElementById('editTaskEstimatedTime').value = event.extendedProps.estimatedTime;
       document.getElementById('editTaskStartDate').value = event.extendedProps.start_date || event.start.toISOString().split('T')[0];
       document.getElementById('editTaskStartTime').value = event.extendedProps.start_time || event.start.toTimeString().substr(0, 5);
       document.getElementById('editTaskPriority').value = event.extendedProps.priority || '2';
 
       taskEditModal.classList.remove('hidden');
+      console.log('Task edit modal opened', event.extendedProps);
     }
 
 
@@ -326,7 +330,20 @@
           priority: taskPriority
         }
       });
+      calendar.on('eventChange', function(info) {
+        updateTask(info.event);
+        reloadCalendarEvents();
+      });
 
+      calendar.on('eventDrop', function(info) {
+        updateTask(info.event);
+        reloadCalendarEvents();
+      });
+
+      calendar.on('eventResize', function(info) {
+        updateTask(info.event);
+        reloadCalendarEvents();
+      });
       updateTask(calendar.getEventById(taskId));
       taskEditModal.classList.add('hidden');
       // closeTaskModal();
@@ -340,16 +357,14 @@
 
     function updateTask(event, isDropEvent = false) {
       // event が undefined または null の場合のチェック
-      if (!event) {
+      if (!event || !event.id) {
         console.error('Error: event is undefined or null');
-        alert('タスクの更新中にエラーが発生しました: イベントが見つかりません。');
         return;
       }
 
-      // event.id が undefined または null の場合のチェック
-      if (!event.id) {
-        console.error('Error: event.id is undefined or null');
-        alert('タスクの更新中にエラーが発生しました: イベントIDが見つかりません。');
+      // フラグを利用して二重更新を防ぐ
+      if (isDropEvent && event.extendedProps.isUpdated) {
+        console.log('Already updated, skipping...');
         return;
       }
 
@@ -357,18 +372,16 @@
         id: event.id,
         name: event.title,
         description: event.extendedProps?.description || '',
-        estimated_time: event.extendedProps?.estimatedTime || 0,
-        start_date: event.start ? event.start.toISOString().split('T')[0] : null,
-        start_time: event.start ? formatTime(event.start) : null,
+        estimated_time: event.extendedProps?.estimatedTime || 1,
+        start_date: event.start.toISOString().split('T')[0],
+        start_time: dateToHi(event.start), // H:i形式
         end_date: event.end ? event.end.toISOString().split('T')[0] : null,
-        end_time: event.end ? formatTime(event.end) : null,
+        end_time: event.end ? dateToHi(event.end) : null, // H:i形式
         priority: event.extendedProps?.priority || '2',
         is_partial_update: isDropEvent
       };
 
       console.log('Updating task with data:', taskData);
-
-
 
       const url = updateTaskUrl.replace(':taskId', event.id);
 
@@ -382,11 +395,6 @@
           body: JSON.stringify(taskData),
         })
         .then(response => {
-          if (!response.ok) {
-            return response.json().then(data => {
-              throw new Error(`HTTP error! status: ${response.status}, message: ${data.message || 'Unknown error'}`);
-            });
-          }
           return response.json();
         })
         .then(data => {
@@ -394,18 +402,19 @@
             console.log('Task updated successfully', data.task);
             // 更新成功時の処理
             // カレンダーイベントを更新
-            event.remove();
-            calendar.addEvent({
-              id: data.task.id,
-              title: data.task.name,
-              start_time: event.start ? formatTime(event.start) : null,
-              end_time: event.end ? formatTime(event.end) : null,
-              extendedProps: {
-                description: data.task.description,
-                estimatedTime: data.task.estimated_time,
-                priority: data.task.priority
-              }
-            });
+            event.extendedProps.isUpdated = true;
+            // event.remove();
+            // calendar.addEvent({
+            //   id: data.task.id,
+            //   title: data.task.name,
+            //   start_time: event.start ? formatTime(event.start) : null,
+            //   end_time: event.end ? formatTime(event.end) : null,
+            //   extendedProps: {
+            //     description: data.task.description,
+            //     estimatedTime: data.task.estimated_time,
+            //     priority: data.task.priority
+            //   }
+            // });
             alert('タスクの更新が完了しました。'); // 成功時のアラート
           } else {
             console.error('Failed to update task', data);
@@ -413,22 +422,51 @@
           }
         })
         .catch(error => {
-          console.error('Error updating task:', error.message);
-          alert('タスクの更新中にエラーが発生しました: ' + error.message);
+          console.error('Error updating task:', error);
+          alert('タスクの更新中にエラーが発生しました: ' + error);
         });
     }
 
     function reloadCalendarEvents() {
-      fetch('/api/get-calendar-events') // サーバー側で最新のイベントデータを返すエンドポイントを作成
+      console.log(`Reloading calendar events for goal ${goalId}`);
+      fetch(`/get-calendar-events/${goalId}`, {
+          cache: 'no-store',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        })
         .then(response => response.json())
         .then(data => {
-          calendar.removeAllEvents();
-          calendar.addEventSource(data.calendarEvents);
+          console.log('Raw fetched data:', data);
+          let events;
+          if (data.calendarEvents) {
+            events = data.calendarEvents;
+          } else if (Array.isArray(data)) {
+            events = data;
+          } else {
+            events = Object.values(data);
+          }
+
+          console.log('Processed events:', events);
+
+          if (Array.isArray(events) && events.length > 0) {
+            calendar.removeAllEvents();
+            calendar.addEventSource(events);
+            console.log('Events added to calendar');
+          } else {
+            console.error('No valid events found in data');
+          }
         })
         .catch(error => {
           console.error('Error fetching calendar events:', error);
         });
     }
+    // ページロード時にイベントを取得してカレンダーに表示
+    document.addEventListener('DOMContentLoaded', function() {
+      reloadCalendarEvents();
+    });
+
 
     function closeTaskModal() {
       const modal = document.getElementById('taskEditModal');
@@ -470,8 +508,33 @@
         });
     }
 
+    // ISO8601形式の日時文字列をHTML時刻入力形式に変換する関数
+    function isoToHtmlTime(isoString) {
+      return isoString.split('T')[1].substr(0, 5);
+    }
 
+    // HTML日付と時刻入力をISO8601形式に変換する関数
+    function htmlToIso(date, time) {
+      return `${date}T${time}:00`;
+    }
 
+    function formatTimeToISO8601(date, timeString) {
+      const [hours, minutes] = timeString.split(':');
+      const newDate = new Date(date);
+      newDate.setHours(hours, minutes, 0, 0);
+      return newDate.toISOString();
+    }
+
+    // ISO8601形式の日時文字列をH:i形式に変換する関数
+    function isoToHi(isoString) {
+      const date = new Date(isoString);
+      return date.toTimeString().substr(0, 5);
+    }
+
+    // 日付オブジェクトをH:i形式に変換する関数
+    function dateToHi(date) {
+      return date.toTimeString().substr(0, 5);
+    }
   });
 </script>
 @endpush
