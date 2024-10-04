@@ -139,7 +139,7 @@
       eventDrop: function(info) {
         if (info.event) {
           updateTask(info.event, true);
-          reloadCalendarEvents(); // イベントの再取得
+          displaySchedule(groupEventsByDate(calendar.getEvents()));
         } else {
           console.error('Error: Dropped event is undefined');
           alert('イベントの移動中にエラーが発生しました: イベントが見つかりません。');
@@ -148,7 +148,7 @@
       eventResize: function(info) {
         if (info.event) {
           updateTask(info.event, true);
-          reloadCalendarEvents(); // イベントの再取得
+          displaySchedule(groupEventsByDate(calendar.getEvents()));
         } else {
           console.error('Error: Resized event is undefined');
           alert('イベントのリサイズ中にエラーが発生しました: イベントが見つかりません。');
@@ -165,7 +165,7 @@
     calendar.render();
 
 
-    if (typeof initialSchedule !== 'undefined') {
+    if (typeof initialSchedule !== 'undefined' && initialSchedule !== null) {
       displaySchedule(initialSchedule);
     }
 
@@ -215,8 +215,9 @@
         .then(data => {
           console.log('Received data:', data);
           if (data.success) {
-            displaySchedule(data.schedule);
-            updateCalendar(data.calendarEvents);
+            calendar.removeAllEvents();
+            calendar.addEventSource(data.calendarEvents);
+            displaySchedule(data.calendarEvents);
           } else {
             console.error('Server reported failure:', data);
             alert(data.message || 'スケジュールの生成に失敗しました。');
@@ -229,53 +230,70 @@
     });
 
 
-    function displaySchedule(schedule) {
-      console.log('Displaying schedule:', schedule);
-      let scheduleHtml = `
-        <h3 class="text-base font-semibold cursor-pointer mb-2" id="accordionBtn">
-          生成されたスケジュール
-        </h3>
-        <div id="scheduleAccordion" class="">
-          <ul class="list-none">
-      `;
-      let calendarEvents = [];
-      for (const date in schedule) {
-        scheduleHtml += `
-        <li class="mb-2 text-sm">
-          <div class="font-semibold py-0 px-1 bg-gray-200 hover:bg-gray-300 rounded cursor-pointer">
-            ${date}
-          </div>
-          <ul id="schedule-${date}" class="list-disc pl-8 mt-2">
-      `;
-        for (const task of schedule[date]) {
-          const roundedDuration = Math.round(task.duration * 10) / 10;
-          scheduleHtml += `<li class="text-xs">${task.name} (${roundedDuration}時間, ${task.start_time} - ${task.end_time})</li>`;
 
-          // カレンダーイベントを作成
-          const startDateTime = new Date(`${date}T${task.start_time}`);
-          const endDateTime = new Date(`${date}T${task.end_time}`);
-          calendarEvents.push({
-            id: task.id,
-            title: task.name,
-            start: startDateTime,
-            end: endDateTime,
-            extendedProps: {
-              duration: roundedDuration,
-              description: task.description || '',
-              estimatedTime: task.estimated_time || 1,
-              priority: task.priority || '2',
-            }
-          });
-        }
+    function displaySchedule(eventsData) {
+      console.log('displaySchedule called with:', eventsData);
+
+      let groupedEvents = {};
+
+      if (Array.isArray(eventsData)) {
+        // カレンダーイベントの配列の場合
+        groupedEvents = eventsData.reduce((groups, event) => {
+          const date = new Date(event.start).toISOString().split('T')[0];
+          if (!groups[date]) {
+            groups[date] = [];
+          }
+          groups[date].push(event);
+          return groups;
+        }, {});
+      } else if (typeof eventsData === 'object' && eventsData !== null) {
+        // 既にグループ化されたデータの場合
+        groupedEvents = eventsData;
+      } else {
+        console.error('Invalid events data:', eventsData);
+        return;
+      }
+
+      console.log('Processed events:', groupedEvents);
+
+      let scheduleHtml = `
+    <h3 class="text-base font-semibold cursor-pointer mb-2" id="accordionBtn">
+      生成されたスケジュール
+    </h3>
+    <div id="scheduleAccordion" class="">
+      <ul class="list-none">
+  `;
+
+      for (const date in groupedEvents) {
+        scheduleHtml += `
+    <li class="mb-2 text-sm">
+      <div class="font-semibold py-0 px-1 bg-gray-200 hover:bg-gray-300 rounded cursor-pointer">
+        ${date}
+      </div>
+      <ul id="schedule-${date}" class="list-disc pl-8 mt-2">
+    `;
+
+        groupedEvents[date].forEach(event => {
+          const startTime = event.start_time || (event.start ? new Date(event.start).toTimeString().substr(0, 5) : '');
+          const endTime = event.end_time || (event.end ? new Date(event.end).toTimeString().substr(0, 5) : '');
+          const duration = event.duration ||
+            (event.start && event.end ? (new Date(event.end) - new Date(event.start)) / (1000 * 60 * 60) : 0);
+          const roundedDuration = Math.round(duration * 10) / 10;
+          scheduleHtml += `<li class="text-xs">${event.name || event.title} (${roundedDuration}時間, ${startTime} - ${endTime})</li>`;
+        });
+
         scheduleHtml += '</ul></li>';
       }
 
       scheduleHtml += '</ul></div>';
 
-      scheduleOutput.innerHTML = scheduleHtml;
-      updateCalendar(calendarEvents);
-      saveCalendarEvents(calendarEvents);
-      scheduleOutput.classList.remove('hidden');
+      const scheduleOutput = document.getElementById('scheduleOutput');
+      if (scheduleOutput) {
+        scheduleOutput.innerHTML = scheduleHtml;
+        scheduleOutput.classList.remove('hidden');
+      } else {
+        console.error('scheduleOutput element not found');
+      }
     }
 
 
@@ -331,23 +349,31 @@
         }
       });
       calendar.on('eventChange', function(info) {
-        updateTask(info.event);
-        reloadCalendarEvents();
+        displaySchedule(groupEventsByDate(calendar.getEvents()));
       });
 
       calendar.on('eventDrop', function(info) {
-        updateTask(info.event);
-        reloadCalendarEvents();
+        displaySchedule(groupEventsByDate(calendar.getEvents()));
       });
 
       calendar.on('eventResize', function(info) {
-        updateTask(info.event);
-        reloadCalendarEvents();
+        displaySchedule(groupEventsByDate(calendar.getEvents()));
       });
       updateTask(calendar.getEventById(taskId));
       taskEditModal.classList.add('hidden');
       // closeTaskModal();
     });
+
+    function groupEventsByDate(events) {
+      return events.reduce((groups, event) => {
+        const date = event.start.toISOString().split('T')[0];
+        if (!groups[date]) {
+          groups[date] = [];
+        }
+        groups[date].push(event);
+        return groups;
+      }, {});
+    }
 
     function formatTime(date) {
       const hours = date.getHours().toString().padStart(2, '0');
