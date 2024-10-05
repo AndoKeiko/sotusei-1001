@@ -33,19 +33,28 @@
 
         <div id="scheduleOutput" class="mt-4 p-4 border rounded-md hidden accordion-collapse" data-accordion="collapse"></div>
         <div class="mt-8">
-          <a id="saveAllScheduleBtn" 　class="mb-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">スケジュールを保存</a>
+          <a id="saveAllScheduleBtn" 　class="mb-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">全てのタスク・通知設定を保存</a>
         </div>
         <div id="calendar" class="mt-8"></div>
-
         <div class="mt-8">
-          <a id="saveAllScheduleBtn" 　class="mb-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">スケジュールを保存</a>
+          <a id="saveAllScheduleBtn" 　class="mb-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">全てのタスク・通知設定を保存</a>
         </div>
-
         <div class="mt-8">
           <a href="{{ route('goals.index', $goal) }}" class="text-blue-600 hover:text-blue-800">目標ページに戻る</a>
         </div>
         <div class="mt-8">
           <a href="{{ route('tasks.index', $goal) }}" class="text-blue-600 hover:text-blue-800">タスク一覧に戻る</a>
+        </div>
+        <div class="mt-4 p-4 border rounded-md">
+          <h3 class="text-lg font-semibold mb-2">通知設定</h3>
+          <div class="flex items-center mb-2">
+            <input type="checkbox" id="emailNotifications" class="mr-2" {{ auth()->user()->email_notifications ? 'checked' : '' }}>
+            <label for="emailNotifications">メール通知（メール認証の方のみ）</label>
+          </div>
+          <div class="flex items-center">
+            <input type="checkbox" id="lineNotifications" class="mr-2" {{ auth()->user()->line_notifications ? 'checked' : '' }}>
+            <label for="lineNotifications">LINE通知（LINE認証の方のみ）</label>
+          </div>
         </div>
       </div>
     </div>
@@ -282,7 +291,7 @@
 
         groupedEvents[date].forEach(event => {
           const startTime = event.start_time || (event.start ? new Date(event.start).toTimeString().substr(0, 5) : '');
-          const endTime = event.end_time || (event.end ? new Date(event.end).toTimeString().substr(0, 5) : '');
+          const endTime = event.end_time || (event.end ? new Date(event.end).toTimeString().substr(0, 5) : '10:00');
           const duration = event.duration ||
             (event.start && event.end ? (new Date(event.end) - new Date(event.start)) / (1000 * 60 * 60) : 0);
           const roundedDuration = Math.round(duration * 10) / 10;
@@ -553,6 +562,10 @@
         description: event.extendedProps.description,
         priority: event.extendedProps.priority
       }));
+      const emailNotifications = document.getElementById('emailNotifications').checked;
+      const lineNotifications = document.getElementById('lineNotifications').checked;
+      console.log('Saving all tasks:', tasksToSave);
+      console.log('Notification settings:', { emailNotifications, lineNotifications });
 
       console.log('Saving all schedule events:', events);
 
@@ -563,12 +576,17 @@
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
           },
           body: JSON.stringify({
-            events: events
+            events: events,
+            notifications: {
+              email: emailNotifications,
+              line: lineNotifications
+            }
           })
         })
         .then(response => response.json())
         .then(data => {
           if (data.success) {
+            console.log('All tasks and notification settings saved successfully', data);
             alert('スケジュールが保存されました');
           } else {
             alert('スケジュール保存に失敗しました');
@@ -580,6 +598,39 @@
         });
     });
 
+    document.getElementById('emailNotifications').addEventListener('change', updateNotificationSettings);
+    document.getElementById('lineNotifications').addEventListener('change', updateNotificationSettings);
+
+    function updateNotificationSettings() {
+    const emailNotifications = document.getElementById('emailNotifications').checked;
+    const lineNotifications = document.getElementById('lineNotifications').checked;
+
+    fetch("{{ route('update.notification.settings') }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+        },
+        body: JSON.stringify({
+            email_notifications: emailNotifications,
+            line_notifications: lineNotifications
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            console.log('通知設定が更新されました');
+            alert('通知設定が正常に更新されました。');
+        } else {
+            console.error('通知設定の更新に失敗しました');
+            alert('通知設定の更新に失敗しました。');
+        }
+    })
+    .catch(error => {
+        console.error('エラー:', error);
+        alert('通知設定の更新中にエラーが発生しました。');
+    });
+}
 
     // ISO8601形式の日時文字列をHTML時刻入力形式に変換する関数
     function isoToHtmlTime(isoString) {

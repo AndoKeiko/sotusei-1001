@@ -170,6 +170,7 @@ class TaskController extends Controller
   public function saveAll(Request $request)
   {
     $events = $request->input('events');
+    $notifications = $request->input('notifications');
 
     foreach ($events as $eventData) {
       $task = Task::find($eventData['id']);
@@ -183,9 +184,13 @@ class TaskController extends Controller
         $task->priority = $eventData['priority'];
         $task->save();
       }
+      $user = Auth::user();
+      $user->email_notifications = $notifications['email'];
+      $user->line_notifications = $notifications['line'];
+      $user->save();
     }
 
-    return response()->json(['success' => true]);
+    return response()->json(['success' => true, 'message' => 'All tasks saved successfully', 'tasks' => $updatedTasks]);
   }
 
 

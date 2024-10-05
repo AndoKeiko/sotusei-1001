@@ -13,10 +13,10 @@ class NotificationService
     public function sendNotification(User $user, Task $task)
     {
         if ($task->start_time) {
-            if ($user->isLineAuthenticated()) {
+            if ($user->line_notifications()) {
                 // LINE認証済みの場合はLINE通知を送信
                 SendLineNotificationJob::dispatch($user->id, $task->name . ' のタスクが開始されます');
-            } elseif ($user->isEmailAuthenticated()) {
+            } elseif ($user->email_notifications()) {
                 // メール認証済みの場合はメール通知を送信
                 $user->notify(new TaskReminder($task));
             } else {

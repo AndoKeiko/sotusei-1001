@@ -3,12 +3,10 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\GoalController;
 use App\Http\Controllers\TaskController;
-use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LineController;
 use App\Http\Controllers\LineWebhookController;
 use App\Http\Controllers\ScheduleController;
-use App\Http\Controllers\CalendarController;
-use App\Http\Controllers\LineLoginController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -67,7 +65,7 @@ Route::middleware(['auth'])->group(function () {
   Route::get('/calendar-events/{userId}', [TaskController::class, 'getCalendarEvents']);
 
   Route::get('/get-calendar-events/{goalId}', [TaskController::class, 'getCalendarEvents']);
-
+  Route::post('/update-notification-settings', [UserController::class, 'updateNotificationSettings'])->name('update.notification.settings');
 
   // Task routes
   Route::post('/update-task', [TaskController::class, 'updateTaskAjax'])->name('tasks.update.ajax');
