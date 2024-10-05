@@ -11,10 +11,11 @@ use App\Notifications\TaskReminder;
 use Illuminate\Support\Facades\Notification;
 use App\Mail\ReminderMail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Contracts\Mail\Mailable;
 
 class SendTaskNotifications extends Command
 {
-  protected $signature = 'app:send-task-notifications {minutes=15}';
+  protected $signature = 'app:send-task-notifications {minutes=5}';
   protected $description = 'Send notifications for tasks starting soon';
 
   public function handle()
