@@ -167,32 +167,53 @@ class TaskController extends Controller
     ]);
   }
 
+  public function saveAll(Request $request)
+  {
+    $events = $request->input('events');
+
+    foreach ($events as $eventData) {
+      $task = Task::find($eventData['id']);
+      if ($task) {
+        $task->start_date = $eventData['start_date'];
+        $task->start_time = $eventData['start_time'];
+        $task->end_date = $eventData['end_date'];
+        $task->end_time = $eventData['end_time'];
+        $task->estimated_time = $eventData['estimated_time'];
+        $task->description = $eventData['description'];
+        $task->priority = $eventData['priority'];
+        $task->save();
+      }
+    }
+
+    return response()->json(['success' => true]);
+  }
+
+
   public function getCalendarEvents($goalId)
   {
-      // タスクを取得して配列に変換
-      $tasks = Task::where('goal_id', $goalId)->get();
-      
-      $calendarEvents = $tasks->map(function ($task) {
-          return [
-              'id' => $task->id,
-              'title' => $task->name,
-              'start' => $task->start_date . 'T' . $task->start_time,
-              'end' => $task->end_date ? $task->end_date . 'T' . $task->end_time : null,
-              'extendedProps' => [
-                  'description' => $task->description,
-                  'estimatedTime' => $task->estimated_time,
-                  'priority' => $task->priority,
-              ],
-          ];
-      })->toArray(); // Collection を配列に変換
-  
-      // ログ出力
-      Log::info('Number of tasks found:', ['count' => $tasks->count()]);
-      Log::info('Goal ID:', ['goalId' => $goalId]);
-      Log::alert('Calendar events retrieved successfully', ['calendarEvents' => $calendarEvents]);
-  
-      // JSON形式でカレンダーイベントを返す
-      return response()->json(['calendarEvents' => $calendarEvents]);
+    // タスクを取得して配列に変換
+    $tasks = Task::where('goal_id', $goalId)->get();
+
+    $calendarEvents = $tasks->map(function ($task) {
+      return [
+        'id' => $task->id,
+        'title' => $task->name,
+        'start' => $task->start_date . 'T' . $task->start_time,
+        'end' => $task->end_date ? $task->end_date . 'T' . $task->end_time : null,
+        'extendedProps' => [
+          'description' => $task->description,
+          'estimatedTime' => $task->estimated_time,
+          'priority' => $task->priority,
+        ],
+      ];
+    })->toArray(); // Collection を配列に変換
+
+    // ログ出力
+    Log::info('Number of tasks found:', ['count' => $tasks->count()]);
+    Log::info('Goal ID:', ['goalId' => $goalId]);
+    Log::alert('Calendar events retrieved successfully', ['calendarEvents' => $calendarEvents]);
+
+    // JSON形式でカレンダーイベントを返す
+    return response()->json(['calendarEvents' => $calendarEvents]);
   }
-  
 }

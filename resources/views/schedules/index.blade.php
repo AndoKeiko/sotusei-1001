@@ -32,8 +32,15 @@
         <button id="generateScheduleBtn" class="mb-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">スケジュール生成</button>
 
         <div id="scheduleOutput" class="mt-4 p-4 border rounded-md hidden accordion-collapse" data-accordion="collapse"></div>
-
+        <div class="mt-8">
+          <a id="saveAllScheduleBtn" 　class="mb-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">スケジュールを保存</a>
+        </div>
         <div id="calendar" class="mt-8"></div>
+
+        <div class="mt-8">
+          <a id="saveAllScheduleBtn" 　class="mb-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">スケジュールを保存</a>
+        </div>
+
         <div class="mt-8">
           <a href="{{ route('goals.index', $goal) }}" class="text-blue-600 hover:text-blue-800">目標ページに戻る</a>
         </div>
@@ -533,6 +540,46 @@
           console.error('Error saving events:', error);
         });
     }
+
+    document.getElementById('saveAllScheduleBtn').addEventListener('click', function() {
+      const events = calendar.getEvents().map(event => ({
+        id: event.id,
+        title: event.title,
+        start_date: event.start.toISOString().split('T')[0],
+        start_time: event.start.toTimeString().substr(0, 5), // H:i 形式
+        end_date: event.end ? event.end.toISOString().split('T')[0] : null,
+        end_time: event.end ? event.end.toTimeString().substr(0, 5) : null, // H:i 形式
+        estimated_time: event.extendedProps.estimatedTime,
+        description: event.extendedProps.description,
+        priority: event.extendedProps.priority
+      }));
+
+      console.log('Saving all schedule events:', events);
+
+      fetch("{{ route('tasks.saveAll') }}", {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+          },
+          body: JSON.stringify({
+            events: events
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('スケジュールが保存されました');
+          } else {
+            alert('スケジュール保存に失敗しました');
+          }
+        })
+        .catch(error => {
+          console.error('Error saving schedule:', error);
+          alert('エラーが発生しました。コンソールを確認してください。');
+        });
+    });
+
 
     // ISO8601形式の日時文字列をHTML時刻入力形式に変換する関数
     function isoToHtmlTime(isoString) {

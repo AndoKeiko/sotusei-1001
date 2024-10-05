@@ -54,6 +54,8 @@ Route::middleware(['auth'])->group(function () {
   Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
   Route::post('/tasks/reorder', [TaskController::class, 'reorder'])->name('tasks.reorder');
   Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
+  // routes/web.php
+  Route::post('/tasks/save-all', [TaskController::class, 'saveAll'])->name('tasks.saveAll');
 
 
   // スケジュール関連ルート
@@ -77,9 +79,8 @@ Route::middleware(['auth'])->group(function () {
   Route::post('/line/webhook', [LineWebhookController::class, 'handleWebhook']);
 
   // テストするためのエンドポイント
-// ルート定義 (2つのパラメータをURLで受け取る)
-Route::get('/test-line-notification/{userId}/{message}', [LineController::class, 'scheduleNotification']);
-
+  // ルート定義 (2つのパラメータをURLで受け取る)
+  Route::get('/test-line-notification/{userId}/{message}', [LineController::class, 'scheduleNotification']);
 });
 
 require __DIR__ . '/auth.php';
