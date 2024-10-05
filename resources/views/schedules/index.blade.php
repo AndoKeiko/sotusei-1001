@@ -37,8 +37,8 @@
         </button>
         <div id="calendar" class="mt-8"></div>
         <ul class="flex flex-nowrap flex-row justify-start items-center mt-4">
-          <li> <a id="saveAllTasksBtn" class="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">
-          全てのタスク・通知設定を保存
+          <li> <a id="saveAllTasksBtn" class="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+              全てのタスク・通知設定を保存
             </a></li>
           <li>
             <a href="{{ route('goals.index', $goal) }}" class="px-4 py-2 ml-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">目標ページに戻る</a>
@@ -46,9 +46,12 @@
           <li>
             <a href="{{ route('tasks.index', $goal) }}" class="px-4 py-2 ml-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">タスク一覧に戻る</a>
           </li>
+          <li>
+            <a id="exportCSV" class="px-4 py-2 ml-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">CSVで書き出す</a>
+          </li>
         </ul>
         <div class="mt-4 p-4 border rounded-md">
-          <h3 class="text-lg font-semibold mb-2">通知設定</h3>
+          <h3 class="text-lg font-semibold mb-2">通知設定(2024年末リリース予定）</h3>
           <div class="flex items-center mb-2">
             <input type="checkbox" id="emailNotifications" class="mr-2" {{ auth()->user()->email_notifications ? 'checked' : '' }}>
             <label for="emailNotifications">メール通知（メール認証の方のみ）</label>
@@ -346,7 +349,10 @@
       const lineNotifications = document.getElementById('lineNotifications').checked;
 
       console.log('Saving all tasks:', tasksToSave);
-      console.log('Notification settings:', { emailNotifications, lineNotifications });
+      console.log('Notification settings:', {
+        emailNotifications,
+        lineNotifications
+      });
 
       const saveUrl = "{{ route('tasks.saveAll') }}";
 
@@ -499,7 +505,7 @@
         id: event.id,
         name: event.title,
         description: event.extendedProps?.description || '',
-        estimated_time: event.extendedProps?.estimatedTime || 1,
+        estimated_time: event.extendedProps?.estimatedTime,
         start_date: event.start.toISOString().split('T')[0],
         start_time: dateToHi(event.start),
         end_date: event.end ? event.end.toISOString().split('T')[0] : event.start.toISOString().split('T')[0],
@@ -690,8 +696,40 @@
 
     // 日付オブジェクトをH:i形式に変換する関数
     function dateToHi(date) {
+      if (typeof date === 'string') {
+        date = new Date(`1970-01-01T${date}Z`); // 時間部分のみをDateオブジェクトに変換
+      }
       return date.toTimeString().substr(0, 5);
     }
+
+
+    document.getElementById('exportCSV').addEventListener('click', function() {
+      let events = calendar.getEvents();
+      events = Array.from(events).map(item => {
+        console.log('exportCSV:', item);
+        let isoString = item.extendedProps?.start_time;
+        return {
+          name: item.title,
+          estimated_time: item.extendedProps?.estimatedTime,
+          start_date: item.start.toISOString().split('T')[0],
+          start_time: dateToHi(isoString),
+          priority: item.extendedProps?.priority || '2',
+          goal_id: goalId
+        };
+      });
+      let csvContent = 'data:text/csv;charset=utf-8,\uFEFF';
+      csvContent += 'タスク名,予想時間,開始日,開始時間,優先度\n';
+      events.forEach(task => {
+        csvContent += `${task.name},${task.estimated_time}時間,${task.start_date},${task.start_time},${task.priority}\n`;
+      });
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', 'schedule.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
   });
 </script>
 @endpush
