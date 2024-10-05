@@ -11,7 +11,7 @@
     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
       <div class="p-6 bg-white border-b border-gray-200">
         <h1 class="text-2xl font-semibold mb-6">{{ $goal->name }} のスケジュール</h1>
-
+        <p>1日の作業時間を入れてスケジュール生成ボタンを押してください。後はカレンダーの要素をドラッグしたりクリックしたりして、スケジュールを入れてください</p>
         <div class="mb-4">
           <label for="work_period_start" class="block text-sm font-medium text-gray-700">開始日</label>
           <input type="date" name="work_period_start" id="work_period_start" value="{{ $goal->period_start->format('Y-m-d') }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
