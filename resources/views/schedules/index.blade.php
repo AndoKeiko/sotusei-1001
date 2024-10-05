@@ -183,9 +183,9 @@
     calendar.render();
 
 
-    if (typeof initialSchedule !== 'undefined' && initialSchedule !== null) {
-      displaySchedule(initialSchedule);
-    }
+    // if (typeof initialSchedule !== 'undefined' && initialSchedule !== null) {
+    //   displaySchedule(initialSchedule);
+    // }
 
 
     generateScheduleBtn.addEventListener('click', function() {
@@ -589,9 +589,9 @@
         });
     }
     // ページロード時にイベントを取得してカレンダーに表示
-    document.addEventListener('DOMContentLoaded', function() {
-      reloadCalendarEvents();
-    });
+    // document.addEventListener('DOMContentLoaded', function() {
+    //   // reloadCalendarEvents();
+    // });
 
 
     function closeTaskModal() {
