@@ -83,13 +83,16 @@
       </div>
     </div>
     <ul class="flex flex-nowrap flex-row justify-start items-center mt-4">
-          <li>
-          <a href="{{ route('schedules.index', $goal) }}" class="px-4 py-2 ml-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">カレンダーに書き出す</a>
-          </li>
-          <li>
-          <a href="{{ route('goals.index') }}" class="px-4 py-2 ml-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">目標ページに戻る</a>
-          </li>
-        </ul>
+      <li>
+        <a href="{{ route('schedules.index', $goal) }}" class="px-4 py-2 ml-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">カレンダーに書き出す</a>
+      </li>
+      <li>
+        <a href="{{ route('goals.index') }}" class="px-4 py-2 ml-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">目標ページに戻る</a>
+      </li>
+      <li>
+        <button id="exportCSV" class="px-4 py-2 ml-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">CSVで書き出す</button>
+      </li>
+    </ul>
   </div>
 </div>
 @push('scripts')
@@ -99,10 +102,10 @@
     const taskTable = document.getElementById('taskTable');
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     const taskList = document.getElementById('taskList');
-    
+
     if (typeof Sortable === 'undefined') {
-        console.error('Sortable is not loaded');
-        return;
+      console.error('Sortable is not loaded');
+      return;
     }
 
     new Sortable(taskTable.querySelector('tbody'), {
@@ -127,10 +130,10 @@
         const name = row.querySelector('.task-name-input').value;
         const time = row.querySelector('.task-estimated_time-input').value;
         const priority = row.querySelector('.task-priority-select').value;
-        const start_date = "2024-10-04";  // タスクの日付の初期値
-        const start_time = "09:00";  // タスクの時間の初期値
+        const start_date = "2024-10-04"; // タスクの日付の初期値
+        const start_time = "09:00"; // タスクの時間の初期値
 
-        fetch(`/update-task`, {//serverではフルパスで通ったところ
+        fetch(`/update-task`, { //serverではフルパスで通ったところ
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -253,6 +256,30 @@
           console.error('Error updating task order:', error);
         });
     }
+
+    document.getElementById('exportCSV').addEventListener('click', function() {
+      const taskItems = document.querySelectorAll('.task-item');
+      const tasks = Array.from(taskItems).map(item => {
+        return {
+          order: item.querySelector('.task-order').textContent,
+          name: item.querySelector('.task-name-display').textContent,
+          estimated_time: item.querySelector('.task-time-display').textContent,
+          priority: item.querySelector('.task-priority-display').textContent
+        };
+      });
+      let csvContent = 'data:text/csv;charset=utf-8,\uFEFF';
+      csvContent += '順序,タスク名,予想時間,優先度\n';
+      tasks.forEach(task => {
+        csvContent += `${task.order},${task.name},${task.estimated_time},${task.priority}\n`;
+      });
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', 'tasks.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
   });
 </script>
 @endpush
