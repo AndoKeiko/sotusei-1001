@@ -82,15 +82,15 @@
         </div>
       </div>
     </div>
-    <ul class="flex flex-nowrap flex-row justify-start items-center mt-4">
+    <ul class="flex flex-nowrap flex-row justify-start items-center mt-6">
       <li>
-        <a href="{{ route('schedules.index', $goal) }}" class="px-4 py-2 ml-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">カレンダーに書き出す</a>
+        <a href="{{ route('schedules.index', $goal) }}" class="px-4 py-2 ml-2 bg-blue-500 text-white rounded-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">カレンダーに書き出す</a>
       </li>
       <li>
         <a href="{{ route('goals.index') }}" class="px-4 py-2 ml-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">目標ページに戻る</a>
       </li>
       <li>
-        <button id="exportCSV" class="px-4 py-2 ml-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">CSVで書き出す</button>
+        <a id="exportCSV" class="px-4 py-2 ml-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">CSVで書き出す</a>
       </li>
     </ul>
   </div>
