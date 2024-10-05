@@ -9,6 +9,8 @@ use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\SomeController;
+
 
 Route::get('/', function () {
   return Auth::check() ? redirect()->route('goals.index') : redirect()->route('login');
@@ -79,6 +81,7 @@ Route::middleware(['auth'])->group(function () {
   // テストするためのエンドポイント
 // ルート定義 (2つのパラメータをURLで受け取る)
 Route::get('/test-line-notification/{userId}/{message}', [LineController::class, 'scheduleNotification']);
+Route::get('/trigger-event', [SomeController::class, 'triggerEvent']);
 
 });
 

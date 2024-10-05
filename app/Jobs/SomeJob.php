@@ -9,30 +9,29 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
-class ExampleJob implements ShouldQueue
+class SomeJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $data; // ジョブに渡されるデータ
+    public $data; // ジョブで処理するデータ
 
     /**
      * Create a new job instance.
      *
-     * @return void
+     * @param mixed $data
      */
     public function __construct($data)
     {
-        $this->data = $data;  // コンストラクタでデータを受け取る
+        // ジョブに渡されたデータをセット
+        $this->data = $data;
     }
 
     /**
      * Execute the job.
-     *
-     * @return void
      */
-    public function handle()
+    public function handle(): void
     {
-        // ここにジョブの処理を記述します
-        Log::info('ExampleJobが実行されました！データ: ' . $this->data);
+        // 渡されたデータをログに出力する
+        Log::info('SomeJobが実行されました。データ: ' . $this->data);
     }
 }
