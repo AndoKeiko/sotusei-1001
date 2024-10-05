@@ -28,9 +28,7 @@ class Kernel extends ConsoleKernel
 
   protected function schedule(Schedule $schedule): void
   {
-      $schedule->call(function () {
-          $this->notifyUsersBeforeTask();
-      })->everyFiveMinutes();  // 5分ごとに通知を確認
+    $schedule->command('app:send-task-notifications 10')->everyMinute();
   }
 
   protected function notifyUsersBeforeTask()
