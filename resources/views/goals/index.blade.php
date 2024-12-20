@@ -19,7 +19,7 @@
 
                 @if ($goals->isNotEmpty())
                     <ul class="space-y-6">
-                        @foreach ($goals as $goal)
+                        @foreach ($goals->reverse() as $goal)
                             <li class="bg-gray-50 p-4 rounded-lg shadow">
                                 <h3 class="font-semibold text-lg text-gray-800">
                                     {{ $goal->name }} ({{ $goal->period_start }} - {{ $goal->period_end }})

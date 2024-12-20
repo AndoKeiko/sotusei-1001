@@ -15,7 +15,7 @@ use Illuminate\Contracts\Mail\Mailable;
 
 class SendTaskNotifications extends Command
 {
-    protected $signature = 'app:send-task-notifications {minutes=5}';
+    protected $signature = 'app:send-task-notifications {minutes=10}';
     protected $description = 'Send notifications for tasks starting soon';
 
     public function handle()
