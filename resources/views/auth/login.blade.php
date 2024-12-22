@@ -45,9 +45,9 @@
     </div>
     <div class="flex items-center justify-end mt-4">
   <a href="{{ route('register') }}" class="ml-4 text-sm text-gray-700 dark:text-gray-500 underline mr-3">Register</a>  
-  <a href="{{ route('line.login') }}" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
+  <!-- <a href="{{ route('line.login') }}" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
       LINEでログイン
-    </a>
+    </a> -->
   </div>
   </form>
 

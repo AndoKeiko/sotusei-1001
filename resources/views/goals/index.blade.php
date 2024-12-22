@@ -21,13 +21,21 @@
                     <ul class="space-y-6">
                         @foreach ($goals->reverse() as $goal)
                             <li class="bg-gray-50 p-4 rounded-lg shadow">
-                                <h3 class="font-semibold text-lg text-gray-800">
-                                    {{ $goal->name }} ({{ $goal->period_start }} - {{ $goal->period_end }})
+                                <h3 class="font-semibold text-lg text-gray-800 w-full block">
+                                    {{ $goal->name }} <span class="inline-block font-normal text-sm mr-5 text-gray-400">({{ $goal->period_start }} - {{ $goal->period_end }})</span>
                                 </h3>
-                                <div class="mt-2">
-                                    <a href="{{ route('tasks.index', $goal) }}" class="text-blue-600 hover:underline">
-                                        タスク一覧を表示
+                                <div class="flex justify-between">
+                                <span class="mt-2">
+                                    <a href="{{ route('tasks.index', $goal) }}" class="text-blue-600 hover:underline text-sm">
+                                      タスク一覧を表示
                                     </a>
+                                </span>
+                                <span>
+                                  <form action="{{ route('goals.destroy', $goal) }}" method="POST" class="inline" onsubmit="return confirm('本当に削除しますか？');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-600 hover:text-red-800 text-sm bg-transparent border-none">削除</button>
+                                </span>
                                 </div>
                             </li>
                         @endforeach
