@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Goal;
 use App\Models\Task;
 use App\Services\ScheduleGeneratorService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
@@ -110,9 +111,29 @@ class GoalController extends Controller
   // 目標の削除
   public function destroy(Goal $goal)
   {
-    \Log::info('Goal to delete: ', ['goal' => $goal]);
-    $goal->delete();
-    return redirect()->route('goals.index')->with('success', '目標が削除されました');
+    try {
+      DB::beginTransaction();
+
+      $deleted = DB::table('goals')
+      ->where('id', $goal->id)
+      ->delete();
+
+      DB::commit();
+
+      if ($deleted) {
+        return redirect()->route('goals.index')
+        ->with('success', '目標が削除されました');
+      }
+
+      return redirect()->route('goals.index')
+      ->with('error', '目標の削除に失敗しました');
+
+    } catch (\Exception $e) {
+      // エラーログを記録
+      DB::rollBack();
+      Log::error('目標削除エラー: ' . $e->getMessage());
+      return redirect()->route('goals.index')->with('error', '目標の削除中にエラーが発生しました');
+    }
   }
 
   // タスクの生成 (AI利用)
