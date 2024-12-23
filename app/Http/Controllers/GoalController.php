@@ -110,6 +110,7 @@ class GoalController extends Controller
   // 目標の削除
   public function destroy(Goal $goal)
   {
+    \Log::info('Goal to delete: ', ['goal' => $goal]);
     $goal->delete();
     return redirect()->route('goals.index')->with('success', '目標が削除されました');
   }
